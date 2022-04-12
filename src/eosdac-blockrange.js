@@ -8,7 +8,7 @@ const Int64BE = require('int64-buffer').Int64BE;
 const DacDirectory = require('./dac-directory');
 
 const {ActionHandler, TraceHandler, DeltaHandler} = require('./handlers');
-const StateReceiver = require('@eosdacio/eosio-statereceiver');
+const StateReceiver = require('./state-receiver');
 
 const Amq = require('./connections/amq');
 const cluster = require('cluster');
@@ -104,6 +104,16 @@ class BlockRangeManager {
             // this.logger.info(`StateReceiver completed`, job)
             this.amq.ack(job);
             this.logger.info(`Finished job ${start_block}-${end_block}`);
+        });
+
+        this.amq.onDisconnected(() => {
+            this.br.stop(true);
+        });
+
+        this.amq.onReconnected(() => {
+            this.br.registerDeltaHandler(delta_handler);
+            this.br.registerTraceHandler(block_handler);
+            this.br.start();
         });
 
         this.logger.info('StateReceiver created');
