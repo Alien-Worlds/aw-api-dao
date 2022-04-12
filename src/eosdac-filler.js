@@ -164,6 +164,17 @@ class FillManager {
                 this.logger.info('Test complete')
                 // process.exit(0)
             });
+
+            this.amq.onDisconnected(() => {
+                this.br.stop(true);
+            });
+    
+            this.amq.onReconnected(() => {
+                this.br.registerTraceHandler(trace_handler);
+                this.br.registerDeltaHandler(delta_handler);
+                this.br.start();
+            });
+
             this.br.start()
         } else if (this.process_only) {
             if (cluster.isMaster) {
@@ -266,6 +277,16 @@ class FillManager {
             // this.logger.info(`StateReceiver completed`, job)
             this.amq.ack(job);
             this.logger.info(`Finished job ${start_block}-${end_block}`);
+        });
+
+        this.amq.onDisconnected(() => {
+            this.br.stop(true);
+        });
+
+        this.amq.onReconnected(() => {
+            this.br.registerDeltaHandler(delta_handler);
+            this.br.registerTraceHandler(block_handler);
+            this.br.start();
         });
 
         this.logger.info('StateReceiver created');
