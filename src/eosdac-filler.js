@@ -133,9 +133,13 @@ class FillManager {
                     cluster.fork();
                 }
             } else {
+                try {
                 //queue.process('block_range', 1, this.processBlockRange.bind(this))
                 this.logger.info(`Listening to queue for block_range`);
                 this.amq.listen('block_range', this.processBlockRange.bind(this));
+                } catch (error) {  
+                    console.error(error);
+                }
             }
 
         } else if (this.test_block) {

@@ -56,7 +56,9 @@ class Amq {
         this.logger.info(`Connected to ${this.config.connectionString}`);
 
 
-        const channel = await conn.createChannel();
+        const channel = await conn.createConfirmChannel();
+
+        this.logger.info(`Channel created`);
 
 
         channel.assertQueue('block_range', {durable: true});
@@ -92,7 +94,7 @@ class Amq {
     }
 
     async send(queue_name, msg) {
-        console.log('send to', queue_name);
+        console.log('send to', queue_name, `| process: ${process.pid}`);
         try {
             if (!Buffer.isBuffer(msg)) {
                 msg = Buffer.from(msg)
@@ -101,12 +103,12 @@ class Amq {
             return this.channel.sendToQueue(queue_name, msg)
         } catch (error) {
             this.logger.error('Cannot perform operation "send", AMQ is not connected!');
-            console.error(error);
+            console.error(`process: ${process.pid}`, error);
         }
     }
 
     async listen(queue_name, cb) {
-        console.log('listen to', queue_name);
+        console.log('listen to', queue_name, `| process: ${process.pid}`);
         try {
             this.channel.prefetch(1);
             // await this.channel.assertQueue(queue_name, {durable: true})
@@ -114,27 +116,27 @@ class Amq {
             this.channel.consume(queue_name, cb, {noAck: false})
         } catch (error) {
             this.logger.error('Cannot perform operation "listen", AMQ is not connected!');
-            console.error(error);
+            console.error(`process: ${process.pid}`, error);
         }
     }
 
     async ack(job) {
-        console.log('ack JOB');
+        console.log(`ack job | process: ${process.pid}`);
         try {
             return this.channel.ack(job);
         } catch (error) {
             this.logger.error('Cannot perform operation "ack", AMQ is not connected!');
-            console.error(error);
+            console.error(`process: ${process.pid}`, error);
         }
     }
 
     async reject(job) {
-        console.log('reject job');
+        console.log(`reject job | process: ${process.pid}`);
         try {
             return this.channel.reject(job, true);
         } catch (error) {
             this.logger.error('Cannot perform operation "reject", AMQ is not connected!');
-            console.error(error);
+            console.error(`process: ${process.pid}`, error);
         }
     }
 }

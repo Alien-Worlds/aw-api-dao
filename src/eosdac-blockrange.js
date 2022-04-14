@@ -25,7 +25,7 @@ class BlockRangeManager {
 
         console.log(`Loading config ${this.config.name}.config.js`);
 
-        this.logger = require('./connections/logger')('eosdac-blockrange', this.config.logger);
+        this.logger = require('./connections/logger')(`eosdac-blockrange: ${process.pid}`, this.config.logger);
     }
 
     async run() {
@@ -108,10 +108,12 @@ class BlockRangeManager {
         });
 
         this.amq.onDisconnected(() => {
+            this.logger.info('Disconnected AMQ', process.pid);
             this.br.stop(true);
         });
 
         this.amq.onReconnected(() => {
+            this.logger.info('Reconnected AMQ', process.pid);
             this.br.registerDeltaHandler(delta_handler);
             this.br.registerTraceHandler(block_handler);
             this.br.start();
