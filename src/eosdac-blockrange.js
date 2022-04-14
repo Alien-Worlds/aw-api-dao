@@ -51,15 +51,15 @@ class BlockRangeManager {
     workerExit(worker, code, signal) {
         this.logger.info(`Process exit`);
         if (signal) {
-            this.logger.warn(`FillManager : worker was killed by signal: ${signal}`);
+            this.logger.warn(`BlockRangeManager : worker was killed by signal: ${signal}`);
         } else if (code !== 0) {
-            this.logger.warn(`FillManager : worker exited with error code: ${code}`);
+            this.logger.warn(`BlockRangeManager : worker exited with error code: ${code}`);
         } else {
             if (this.job) {
                 // Job success
                 this.amq.ack(this.job);
             }
-            this.logger.info('FillManager : worker success!');
+            this.logger.info('BlockRangeManager : worker success!');
         }
 
         if (worker.isDead()) {
@@ -67,17 +67,18 @@ class BlockRangeManager {
                 this.amq.reject(this.job);
             }
 
-            this.logger.warn(`FillManager : Worker is dead, starting a new one`);
+            this.logger.warn(`BlockRangeManager : Worker is dead, starting a new one`);
             cluster.fork();
 
             if (worker.isMaster) {
-                this.logger.error('FillManager : Main thread died :(')
+                this.logger.error('BlockRangeManager : Main thread died :(')
             }
         }
 
     }
 
     async processBlockRange(job) {
+        console.log('BlockRange: Call processBlockRange!');
         this.job = job;
         //await this.amq.ack(job)
 

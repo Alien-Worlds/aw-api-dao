@@ -153,7 +153,6 @@ class StateReceiver {
     }
 
     async handleFork(block_num){
-        console.log('FORK HANDLERS', this.fork_handlers.length)
         this.fork_handlers.forEach((h) => {
             h(block_num)
         })
@@ -232,7 +231,7 @@ class StateReceiver {
             this.done_handlers.forEach((handler) => {
                 handler()
             })
-            this.connection.disconnect()
+            this.connection.disconnect(true);
         }
 
         this.progress_handlers.forEach((handler) => {

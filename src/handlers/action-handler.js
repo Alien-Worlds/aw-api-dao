@@ -107,6 +107,7 @@ class ActionHandler {
             sb_action.pushBytes(action.act.data);
 
             if (this.amq) {
+                try {
                 // this.logger.info(`Queueing action for ${action.act.account}::${action.act.name}`);
                 const block_buffer = new Int64(block_num).toBuffer();
                 const timestamp_buffer = this.int32ToBuffer(block_timestamp.getTime() / 1000);
@@ -116,6 +117,10 @@ class ActionHandler {
                 const action_buffer = Buffer.from(sb_action.array);
                 // this.logger.info(`Publishing action`)
                 this.amq.send('action', Buffer.concat([block_buffer, timestamp_buffer, trx_id_buffer, recv_buffer, global_buffer, action_buffer]))
+                } catch (error) {
+                    this.logger.info(`Error Queue Action ${action.act.account}:${action.act.name}`);
+                    console.error(error);
+                }
             } else {
                 console.error(`No queue when processing action for ${action.act.account}::${action.act.name} in ${trx_id}`, {action});
             }

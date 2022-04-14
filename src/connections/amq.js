@@ -45,7 +45,7 @@ class Amq {
 
             this.logger.info(`Adding ${this.listeners.length} listeners`);
             this.listeners.forEach(({queue_name, cb}) => {
-                this.listen(queue_name, cb);
+                this.channel.consume(queue_name, cb, {noAck: false})
             });
         }
     }
@@ -92,66 +92,49 @@ class Amq {
     }
 
     async send(queue_name, msg) {
-        if (this.initialized){
+        console.log('send to', queue_name);
+        try {
             if (!Buffer.isBuffer(msg)) {
                 msg = Buffer.from(msg)
             }
             this.logger.info(`Message sent to queue ${queue_name}`);
             return this.channel.sendToQueue(queue_name, msg)
-        } else {
+        } catch (error) {
             this.logger.error('Cannot perform operation "send", AMQ is not connected!');
+            console.error(error);
         }
     }
-    //
-    // async publish(key, data, delay_ms){
-    //     if (!Buffer.isBuffer(data)) {
-    //         data = Buffer.from(data);
-    //     }
-    //
-    //     if (!this.initialized){
-    //         await this.init();
-    //     }
-    //
-    //     this.logger.info(`Publish message to ${this.exchange}`);
-    //
-    //     this.channel.publish(this.exchange, key, data, {headers: {"x-delay": delay_ms}});
-    // }
 
     async listen(queue_name, cb) {
-        if (this.initialized){
+        console.log('listen to', queue_name);
+        try {
             this.channel.prefetch(1);
             // await this.channel.assertQueue(queue_name, {durable: true})
             this.listeners.push({queue_name, cb});
             this.channel.consume(queue_name, cb, {noAck: false})
-        } else {
+        } catch (error) {
             this.logger.error('Cannot perform operation "listen", AMQ is not connected!');
+            console.error(error);
         }
     }
 
     async ack(job) {
-        if (this.initialized){
-            try {
-                return this.channel.ack(job);
-            }
-            catch (e){
-                this.logger.error(`Failed to ack job`, e);
-                // failure to ack isnt a problem, all jobs are idempotent
-            }
-        } else {
+        console.log('ack JOB');
+        try {
+            return this.channel.ack(job);
+        } catch (error) {
             this.logger.error('Cannot perform operation "ack", AMQ is not connected!');
+            console.error(error);
         }
     }
 
     async reject(job) {
-        if (this.initialized) {  
-            try {
-                return this.channel.reject(job, true);
-            }
-            catch (e){
-                this.logger.error(`Failed to reject job`);
-            }
-        } else {
+        console.log('reject job');
+        try {
+            return this.channel.reject(job, true);
+        } catch (error) {
             this.logger.error('Cannot perform operation "reject", AMQ is not connected!');
+            console.error(error);
         }
     }
 }

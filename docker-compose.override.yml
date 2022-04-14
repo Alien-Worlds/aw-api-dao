@@ -45,15 +45,22 @@ services:
 
   queue: # login guest:guest
     image: rabbitmq:management
+    container_name: queue_mainnet
     restart: always
+    ulimits:
+      nofile:
+        soft: 128000
+        hard: 128000
     ports:
-      - '5672:5672'
-      - '15672:15672'
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:15672']
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    #  - '5672:5672'
+      - '43235:15672'
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbit consumer_timeout 5400000'
+    #healthcheck:
+    #  test: ['CMD', 'curl', '-f', 'http://queue:15672']
+    #  interval: 30s
+    #  timeout: 10s
+    #  retries: 5
 
 volumes:
   database:

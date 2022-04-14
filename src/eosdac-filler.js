@@ -3,10 +3,10 @@
 process.title = 'eosdac-filler';
 
 const commander = require('commander');
-const {Api, JsonRpc} = require('@jafri/eosjs2');
-const {TextDecoder, TextEncoder} = require('text-encoding');
+const { Api, JsonRpc } = require('@jafri/eosjs2');
+const { TextDecoder, TextEncoder } = require('text-encoding');
 const fetch = require('node-fetch');
-const {loadConfig, getRestartBlock} = require('./functions');
+const { loadConfig, getRestartBlock } = require('./functions');
 
 
 // const kue = require('kue')
@@ -19,7 +19,7 @@ let rpc;
 const signatureProvider = null;
 
 
-const {ActionHandler, TraceHandler, DeltaHandler, BlockHandler} = require('./handlers');
+const { ActionHandler, TraceHandler, DeltaHandler, BlockHandler } = require('./handlers');
 // const StateReceiver = require('@eosdacio/eosio-statereceiver');
 const StateReceiver = require('./state-receiver');
 
@@ -27,7 +27,7 @@ const StateReceiver = require('./state-receiver');
 // process.stdout.write = process.stderr.write = access.write.bind(access)
 
 class FillManager {
-    constructor({startBlock = 0, endBlock = 0xffffffff, config = '', irreversibleOnly = false, replay = false, test = 0, processOnly = false}) {
+    constructor({ startBlock = 0, endBlock = 0xffffffff, config = '', irreversibleOnly = false, replay = false, test = 0, processOnly = false }) {
         this.config = loadConfig();
         this.start_block = startBlock;
         this.end_block = endBlock;
@@ -43,7 +43,7 @@ class FillManager {
     }
 
     async run() {
-        rpc = new JsonRpc(this.config.eos.endpoint, {fetch});
+        rpc = new JsonRpc(this.config.eos.endpoint, { fetch });
         this.api = new Api({
             rpc,
             signatureProvider,
@@ -69,16 +69,15 @@ class FillManager {
         this.amq = new Amq(this.config);
         await this.amq.init();
 
-        const dac_directory = new DacDirectory({config: this.config, db:this.db});
+        const dac_directory = new DacDirectory({ config: this.config, db: this.db });
         await dac_directory.reload();
 
-        const action_handler = new ActionHandler({queue: this.amq, config: this.config, dac_directory, logger:this.logger});
-        const trace_handler = new TraceHandler({queue: this.amq, action_handler, config: this.config, logger:this.logger});
-        const delta_handler = new DeltaHandler({queue: this.amq, config: this.config, dac_directory, logger:this.logger});
+        const action_handler = new ActionHandler({ queue: this.amq, config: this.config, dac_directory, logger: this.logger });
+        const trace_handler = new TraceHandler({ queue: this.amq, action_handler, config: this.config, logger: this.logger });
+        const delta_handler = new DeltaHandler({ queue: this.amq, config: this.config, dac_directory, logger: this.logger });
 
         if (this.replay) {
             if (cluster.isMaster) {
-
                 this.logger.info(`Replaying from ${this.start_block} in parallel mode`);
 
 
@@ -100,32 +99,32 @@ class FillManager {
                 let number_jobs = 0;
                 while (true) {
                     if (this.amq.initialized) {
-                    this.logger.info(`adding job for ${from} to ${to}`);
-                    let from_buffer = new Int64BE(from).toBuffer();
-                    let to_buffer = new Int64BE(to).toBuffer();
+                        this.logger.info(`adding job for ${from} to ${to}`);
+                        let from_buffer = new Int64BE(from).toBuffer();
+                        let to_buffer = new Int64BE(to).toBuffer();
 
-                    this.amq.send('block_range', Buffer.concat([from_buffer, to_buffer]));
-                    number_jobs++;
+                        this.amq.send('block_range', Buffer.concat([from_buffer, to_buffer]));
+                        number_jobs++;
 
-                    if (to === lib) {
-                        break_now = true
+                        if (to === lib) {
+                            break_now = true
+                        }
+
+                        from += chunk_size;
+                        to += chunk_size;
+
+                        if (to > lib) {
+                            to = lib
+                        }
+
+                        if (from > to) {
+                            break_now = true
+                        }
+
+                        if (break_now) {
+                            break
+                        }
                     }
-
-                    from += chunk_size;
-                    to += chunk_size;
-
-                    if (to > lib) {
-                        to = lib
-                    }
-
-                    if (from > to) {
-                        break_now = true
-                    }
-
-                    if (break_now) {
-                        break
-                    }
-                }
                 }
 
                 this.logger.info(`Queued ${number_jobs} jobs`);
@@ -133,12 +132,6 @@ class FillManager {
                 for (let i = 0; i < this.config.fillClusterSize; i++) {
                     cluster.fork();
                 }
-
-                // Start from current lib
-                // this.br = new StateReceiver({startBlock: lib, mode: 1, config: this.config});
-                // this.br.registerTraceHandler(block_handler);
-                // this.br.registerDeltaHandler(delta_handler);
-                // this.br.start()
             } else {
                 //queue.process('block_range', 1, this.processBlockRange.bind(this))
                 this.logger.info(`Listening to queue for block_range`);
@@ -168,7 +161,7 @@ class FillManager {
             this.amq.onDisconnected(() => {
                 this.br.stop(true);
             });
-    
+
             this.amq.onReconnected(() => {
                 this.br.registerTraceHandler(trace_handler);
                 this.br.registerDeltaHandler(delta_handler);
@@ -192,7 +185,7 @@ class FillManager {
         } else {
             if (start_block <= 1 && this.config.eos.dacGenesisBlock) {
                 start_block = parseInt(this.config.eos.dacGenesisBlock);
-                if (isNaN(start_block)){
+                if (isNaN(start_block)) {
                     throw new Error(`Invalid eos.dacGenesisBlock value "${this.config.eos.dacGenesisBlock}"`);
                 }
             }
@@ -209,9 +202,9 @@ class FillManager {
                 this.br.start();
             });
 
-            const block_handler = new BlockHandler({config: this.config});
+            const block_handler = new BlockHandler({ config: this.config });
 
-            this.br = new StateReceiver({startBlock: start_block, mode: 0, config: this.config});
+            this.br = new StateReceiver({ startBlock: start_block, mode: 0, config: this.config });
             this.br.registerTraceHandler(trace_handler);
             this.br.registerDeltaHandler(delta_handler);
             this.br.registerBlockHandler(block_handler);
@@ -251,6 +244,7 @@ class FillManager {
     }
 
     async processBlockRange(job) {
+        console.log('Filler: Call processBlockRange!', process.pid);
         this.job = job;
         //await this.amq.ack(job)
 
@@ -262,21 +256,21 @@ class FillManager {
 
         this.logger.info(`processBlockRange pid : ${process.pid} ${start_block} to ${end_block}`);
 
-        const dac_directory = new DacDirectory({config: this.config, db:this.db});
+        const dac_directory = new DacDirectory({ config: this.config, db: this.db });
         await dac_directory.reload();
 
-        const action_handler = new ActionHandler({queue: this.amq, config: this.config, dac_directory, logger:this.logger});
-        const block_handler = new TraceHandler({queue: this.amq, action_handler, config: this.config, logger:this.logger});
-        const delta_handler = new DeltaHandler({queue: this.amq, config: this.config, dac_directory, logger:this.logger});
+        const action_handler = new ActionHandler({ queue: this.amq, config: this.config, dac_directory, logger: this.logger });
+        const block_handler = new TraceHandler({ queue: this.amq, action_handler, config: this.config, logger: this.logger });
+        const delta_handler = new DeltaHandler({ queue: this.amq, config: this.config, dac_directory, logger: this.logger });
 
 
-        this.br = new StateReceiver({startBlock: start_block, endBlock: end_block, mode: 1, config: this.config});
+        this.br = new StateReceiver({ startBlock: start_block, endBlock: end_block, mode: 1, config: this.config });
         this.br.registerDeltaHandler(delta_handler);
         this.br.registerTraceHandler(block_handler);
         this.br.registerDoneHandler(() => {
             // this.logger.info(`StateReceiver completed`, job)
             this.amq.ack(job);
-            this.logger.info(`Finished job ${start_block}-${end_block}`);
+            this.logger.info(`Finished job ${start_block}-${end_block} process: ${process.pid}`);
         });
 
         this.amq.onDisconnected(() => {

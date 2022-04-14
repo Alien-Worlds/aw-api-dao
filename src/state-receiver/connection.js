@@ -121,7 +121,13 @@ class Connection {
     }
 
     send(request) {
-        this.ws.send(this.serialize('request', request));
+        try {
+            this.ws.send(this.serialize('request', request));
+        } catch (error) {
+            console.log('An exception was caught while sending! connection process:', process.pid);
+            console.log('request', request);
+            console.log(error);
+        }
     }
 
     onConnect(){
