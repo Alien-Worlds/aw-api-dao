@@ -37,6 +37,7 @@ services:
 
   db:
     image: mongo
+    container_name: db_mainnet
     restart: always
     ports:
       - '27017:27017'

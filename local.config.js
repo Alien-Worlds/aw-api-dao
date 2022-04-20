@@ -2,13 +2,13 @@ module.exports = {
     fillClusterSize: 4,
     clusterSize: 10,
     mongo: {
-        url: 'mongodb://localhost:27017',
+        url: 'mongodb://db',
         dbName: 'eosdac',
         traceCollection: 'traces',
         stateCollection: 'states'
     },
     amq: {
-        connectionString: 'amqp://guest:guest@localhost/'
+        connectionString: 'amqp://guest:guest@queue_mainnet/'
     },
     ws: {
         host: 'localhost',
@@ -20,7 +20,7 @@ module.exports = {
     },
     eos: {
         chainId: "8be32650b763690b95b7d7e32d7637757a0a7392ad04f1c393872e525a2ce82b",
-        endpoint: 'http://localhost:8888',
+        endpoint: 'https://wax.eosdac.io/',
         wsEndpoint: 'ws://localhost:8080',
         msigContract: 'msig.world',
         dacGenesisBlock: 1,  // the first block that includes any dac contract actions including the initial setcode
