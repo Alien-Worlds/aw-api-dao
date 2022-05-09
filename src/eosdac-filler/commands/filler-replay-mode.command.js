@@ -6,6 +6,7 @@ const { loadConfig } = require('../../functions');
 const { MainThread } = require('../common/main-thread');
 const { FillerWorker } = require('./filler-worker.thread');
 const { MessageService } = require('../../connections/message.service');
+const fetch = require('node-fetch');
 
 const queueBlockRangeMessages = async (startBlock, config, logger) => {
 
@@ -24,63 +25,19 @@ const queueBlockRangeMessages = async (startBlock, config, logger) => {
     const messageService = new MessageService(config.amq.connectionString);
     await messageService.init();
 
-    // let chunkSize = 5000;
-    // const range = lastIrreversibleBlock - startBlock;
-
-    // if (chunkSize > (range / config.fillClusterSize)) {
-    //     chunkSize = parseInt((range) / config.fillClusterSize)
-    // }
-
-    // let from = parseInt(startBlock);
-    // if (isNaN(from) || from === -1) {
-    //     from = 0
-    // }
-    // let to = from + chunkSize; // to is not inclusive
-
-    // let breakNow = false;
-    // let messagesCount = 0;
-
-    // while (true) {
-    //     logger.info(`adding job for ${from} to ${to}`);
-    //     let from_buffer = new Int64BE(from).toBuffer();
-    //     let to_buffer = new Int64BE(to).toBuffer();
-
-    //     this.amq.send('block_range', Buffer.concat([from_buffer, to_buffer]));
-    //     messagesCount++;
-
-    //     if (to === lastIrreversibleBlock) {
-    //         breakNow = true
-    //     }
-
-    //     from += chunkSize;
-    //     to += chunkSize;
-
-    //     if (to > lastIrreversibleBlock) {
-    //         to = lastIrreversibleBlock
-    //     }
-
-    //     if (from > to) {
-    //         breakNow = true
-    //     }
-
-    //     if (breakNow) {
-    //         break
-    //     }
-    // }
-    //------
-
-    const chunkSize = 5000;
-    let endBlock = lastIrreversibleBlock;
+    const endBlock = lastIrreversibleBlock;
+    const range = endBlock - startBlock;
+    const chunkSize = parseInt(range/ config.fillClusterSize);
     let from = startBlock;
     let to = from + chunkSize;
     let i = 0;
     let messagesCount = 0;
-    let chunksCount = parseInt((endBlock - startBlock) / chunkSize);
+    let chunksCount = parseInt(range/ chunkSize);
     
     // because we operate on integers, we must make sure that we send
     // the appropriate number of messages to fill the entire range
     // look for the remainder
-    if (chunkSize * (endBlock / chunkSize) !== endBlock) {
+    if (chunkSize * parseInt(endBlock / chunkSize) !== endBlock) {
         chunksCount += 1;
     }
 
