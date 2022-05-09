@@ -3,8 +3,8 @@ const Int64BE = require('int64-buffer').Int64BE;
 const { Api, JsonRpc } = require('@jafri/eosjs2');
 const { TextDecoder, TextEncoder } = require('text-encoding');
 const { loadConfig } = require('../../functions');
-const { MainThread } = require('../common/main-thread');
-const { FillerWorker } = require('./filler-worker.thread');
+const { MainThread } = require('../../common/main-thread');
+const { FillerWorker } = require('../filler-worker.thread');
 const { MessageService } = require('../../connections/message.service');
 const fetch = require('node-fetch');
 
@@ -27,7 +27,10 @@ const queueBlockRangeMessages = async (startBlock, config, logger) => {
 
     const endBlock = lastIrreversibleBlock;
     const range = endBlock - startBlock;
-    const chunkSize = parseInt(range/ config.fillClusterSize);
+    const defaultChunkSize = 5000;
+    const chunkSizeByClusterSize = parseInt(range/ config.fillClusterSize);
+    // const chunkSize = Math.min(chunkSizeByClusterSize, defaultChunkSize);
+    const chunkSize = chunkSizeByClusterSize;
     let from = startBlock;
     let to = from + chunkSize;
     let i = 0;

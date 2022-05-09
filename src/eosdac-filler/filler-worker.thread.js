@@ -66,7 +66,7 @@ class FillerWorker extends WorkerThread {
             const blockRange = BlocksRange.fromMessage(message);
             const stateHistory = new StateHistoryService(this._config.eos);
             stateHistory.onReceivedBlock(block => this._processBlock(block));
-            stateHistory.onBlockRangeComplete(() => {
+            stateHistory.onBlockRangeComplete(async () => {
                 await stateHistory.disconnect();
                 this._messageService.ack(message);
             });

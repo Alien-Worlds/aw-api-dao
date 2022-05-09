@@ -22,12 +22,15 @@ services:
       - ./:/var/www/api
 
   filler:
+    environment:
+      CONFIG: '${CONFIG}'
+      FILLER_FLAGS: '-r'
     command:
-      ['sh', '-c', 'scripts/wq.sh && flags="${FILLER_FLAGS}" yarn filler']
-    depends_on:
-      - queue
+      ['sh', '-c', 'scripts/wq.sh && flags="${FILLER_FLAGS}" yarn filler -r -s 173000000']
+    restart: on-failure
     volumes:
-      - ./:/var/www/api
+      - eosdac-api:/tmp/
+      - ./mainnet.config.js:/var/www/api/mainnet.config.js
 
   ws:
     command:
@@ -45,15 +48,17 @@ services:
 
   queue: # login guest:guest
     image: rabbitmq:management
+    hostname: dao-queue
     restart: always
+    ulimits:
+      nofile:
+        soft: 128000
+        hard: 128000
     ports:
-      - '5672:5672'
-      - '15672:15672'
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:15672']
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      #- '5672:5672'
+      - '43235:15672'
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbit consumer_timeout 5400000'
 
 volumes:
   database:

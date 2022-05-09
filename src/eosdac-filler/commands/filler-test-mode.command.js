@@ -4,7 +4,7 @@ const StateReceiver = require('../../state-receiver');
 const { MessageService } = require('../../connections/message.service');
 const { loadConfig } = require('../../functions');
 
-const runFillerTestMode = (testBlock) => {
+const runFillerTestMode = async (testBlock) => {
     const config = loadConfig();
     const logger = require('../../connections/logger')('eosdac-filler', config.logger);
 

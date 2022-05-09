@@ -1,9 +1,9 @@
 const cluster = require('cluster');
 const { loadConfig } = require('../../functions');
-const { MainThread } = require('../common/main-thread');
-const { FillerWorker } = require('./filler-worker.thread');
+const { MainThread } = require('../../common/main-thread');
+const { FillerWorker } = require('../filler-worker.thread');
 
-const runFillerProcessOnlyMode = () => {
+const runFillerProcessOnlyMode = async () => {
 
     const config = loadConfig();
     const logger = require('../../connections/logger')('eosdac-filler', config.logger);
