@@ -1,6 +1,5 @@
 const { Connection } = require("./connection")
 
-
 class StateReceiver {
     /* mode 0 = serial, 1 = parallel */
     constructor({ startBlock = 0, endBlock = 0xffffffff, config, mode = 0, irreversibleOnly = false }){
