@@ -8,7 +8,7 @@ class MessageService {
     }
 
     async init() {
-        await this.amq.init();
+        await this._source.init();
     }
 
     onConnected(handler) {

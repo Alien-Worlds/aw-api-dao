@@ -1,12 +1,12 @@
+const cluster = require('cluster');
+
 class MainThread {
     _workersCount;
     _workersByPid = new Map();
     _handlersByMessageType = new Map();
-    _workerMessageHandler;
 
     constructor(workersCount){
         this._workersCount = workersCount;
-        this._workerMessageHandler = handler;
     }
 
     get workersCount() {

@@ -4,6 +4,7 @@ const { WorkerThread } = require("../common/worker-thread");
 const { QueueName } = require("../connections/amq.source");
 const { MessageService } = require("../connections/message.service");
 const { StateHistoryService } = require("../state-history/state-history.service");
+const { parseDate } = require("../state-history/state-history.utils");
 const { ActionHandler, TraceHandler, DeltaHandler } = require('../handlers');
 const DacDirectory = require('../dac-directory');
 
@@ -26,31 +27,33 @@ class FillerWorker extends WorkerThread {
     async start() {
         try {
             await this._messageService.init();
+
             this._messageService.addListener(
                 QueueName.AlienWorldsBlockRange,
                 (data) => this._onReceivedBlockRange(data)
             );
 
-            _dacDirectory = new DacDirectory({ config: this._config });
-            _actionHandler = new ActionHandler({
+            this._dacDirectory = new DacDirectory({ config: this._config });
+            this._actionHandler = new ActionHandler({
                 queue: this._messageService._source,
                 config: this._config,
                 dac_directory: this._dacDirectory,
                 logger: this._logger,
             });
-            _traceHandler = new TraceHandler({
+            this._traceHandler = new TraceHandler({
                 queue: this._messageService._source,
-                actionHandler,
+                action_handler: this._actionHandler,
                 config: this._config,
                 logger: this._logger,
             });
-            _deltaHandler = new DeltaHandler({
+            this._deltaHandler = new DeltaHandler({
                 queue: this._messageService._source,
                 config: this._config,
                 dac_directory: this._dacDirectory,
                 logger: this._logger,
             });
         } catch (error) {
+            console.error(error);
             this.sendToMainThread(new WorkerMessage({
                 pid: this.id,
                 type: WorkerMessageType.Error,
@@ -62,19 +65,25 @@ class FillerWorker extends WorkerThread {
     async _onReceivedBlockRange(message) {
         try {
             await this._dacDirectory.reload(); 
-
-            const blockRange = BlocksRange.fromMessage(message);
+            
+            const blockRange = BlocksRange.create(message);
             const stateHistory = new StateHistoryService(this._config.eos);
             stateHistory.onReceivedBlock(block => this._processBlock(block));
-            stateHistory.onBlockRangeComplete(async () => {
+            stateHistory.onBlockRangeComplete(async (range) => {
+                console.log('Completed block range', range);
                 await stateHistory.disconnect();
                 this._messageService.ack(message);
             });
 
             await stateHistory.connect();
 
-            stateHistory.requestBlocks(blockRange);
+            stateHistory.requestBlocks(
+                blockRange,
+                !!this._traceHandler,
+                !!this._deltaHandler,
+            );
         } catch (error) {
+            console.error(error);
             this.sendToMainThread(new WorkerMessage({
                 pid: this.id,
                 type: WorkerMessageType.Warning,
@@ -85,7 +94,10 @@ class FillerWorker extends WorkerThread {
 
     async _processBlock(data) {
         const { blockNumber, block, traces, deltas, abi } = data;
-        const blockTimestamp = block ? new Date(this.parseDate(block.timestamp.replace(['.000', '.500'], 'Z'))) : new Date();
+        console.log('processing block...', blockNumber);
+        const blockTimestamp = block 
+            ? new Date(parseDate(block.timestamp.replace(['.000', '.500'], 'Z'))) 
+            : new Date();
 
         if (deltas.length > 0){
             this._deltaHandler.processDelta(blockNumber, deltas, abi.types, blockTimestamp)

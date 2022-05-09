@@ -17,7 +17,7 @@ class WorkerThread {
         try {
             process.send(message);
         } catch (error) {
-            log('Could not send message to master due to: ', error)
+            log('Could not send message to main thread due to: ', error)
         }
     }
 

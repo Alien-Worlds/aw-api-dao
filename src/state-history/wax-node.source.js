@@ -1,3 +1,5 @@
+const WebSocket = require('ws');
+
 const connectionState = {
     Connecting: 'connecting',
     Connected: 'connected',
@@ -13,7 +15,6 @@ class WaxNodeSource {
     _connectionState = connectionState.Idle;
     _connectionChangeHandlers = new Map();
     _socketIndex = -1;
-    _maxMessagesInFlight = 1;
 
     constructor(
         config,
@@ -63,9 +64,9 @@ class WaxNodeSource {
                 this._client = new WebSocket(this._getNextEndpoint(), { perMessageDeflate: false });
                 this._client.on('error', error => this._errorHandler(error));
                 
-                await new Promise(resolve => client.once('open', resolve));
+                await new Promise(resolve => this._client.once('open', resolve));
                 // receive ABI
-                const abi = await new Promise(resolve => client.once('message', resolve));
+                const abi = await new Promise(resolve => this._client.once('message', resolve));
                 // set message handler
                 this._client.on('message', message => this._incomingMessageHandler(message));
                 
@@ -82,7 +83,7 @@ class WaxNodeSource {
                 await this._updateConnectionState(connectionState.Disconnecting);
                 this._client.removeAllListeners();
                 this._client.close();
-                await new Promise(resolve => client.once('close', resolve));
+                await new Promise(resolve => this._client.once('close', resolve));
                 await this._updateConnectionState(connectionState.Idle);
             } catch (error) {
                 this._errorHandler(error);
@@ -95,32 +96,10 @@ class WaxNodeSource {
         this._incomingMessageHandler = null;
         this._connectionChangeHandlers.clear();
     }
-    
-    requestBlocks(startBlock, endBlock, shouldFetchTraces, shouldFetchDeltas) {
-        try {
-            const message = serializeMessage('request', ['get_blocks_request_v0', { 
-                irreversible_only: false,
-                start_block_num: startBlock,
-                end_block_num: endBlock,
-                max_messages_in_flight: this._maxMessagesInFlight,
-                have_positions:[],
-                fetch_block: true,
-                fetch_traces: shouldFetchTraces,
-                fetch_deltas: shouldFetchDeltas, 
-            }]);
-            this._client.send(message);
-        } catch (error) {
-            this._errorHandler(error);
-        }
-    }
 
-    ackGetBlocksRequests(count = 1) {
-        try {
-            this._client.send(serializeMessage('request', ['get_blocks_ack_request_v0', { num_messages: count }]));
-        } catch (error) {
-            this._errorHandler(error);
-        }
+    send(message) {
+        this._client.send(message);
     }
 }
 
-module.exports = { WaxNodeSource };
+module.exports = { WaxNodeSource, connectionState };

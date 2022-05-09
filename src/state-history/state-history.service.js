@@ -1,6 +1,7 @@
 const { Block } = require("./block");
+const { serializeMessage, deserializeMessage } = require("./state-history.utils");
 const { StateHistoryAbi } = require("./state-history.abi");
-const { WaxNodeSource } = require("./wax-node.source");
+const { WaxNodeSource, connectionState } = require("./wax-node.source");
 
 const log = (...args) => console.log(`process:${process.pid} | `, ...args);
 
@@ -40,20 +41,24 @@ class StateHistoryService {
     _onErrorHandler = log;
 
     constructor(config) {
-        this._source = new WaxNodeSource(config, this._onMessage, this._onError);
+        this._source = new WaxNodeSource(
+            config,
+            (message) => this._onMessage(message),
+            (error) => this._onError(error)
+        );
         this._source.addConnectionStateHandler(
             connectionState.Connected,
-            this._onConnected
+            (abi) => this._onConnected(abi)
         );
         this._source.addConnectionStateHandler(
             connectionState.Disconnected,
-            this._onDisconnected
+            () => this._onDisconnected()
         );
     }
 
     _onConnected(abi) {
         this._connected = true;
-        this._abi = StateHistoryAbi.fromDto(abi);
+        this._abi = StateHistoryAbi.create(abi);
     }
 
     _onDisconnected() {
@@ -61,31 +66,50 @@ class StateHistoryService {
         this._connected = false;
     }
 
-    async _onMessage(type, message) {
+    async _onMessage(message) {
+        const { types } = this._abi;
+        const [type, response] = deserializeMessage('result', message, types);
+
         switch (type) {
             case 'get_status_result_v0': {
-                log(message);
+                log(response);
                 return;
             }
             case 'get_blocks_result_v0': {
-                await this._handleBlocksResultMessage(message); 
+                await this._handleBlocksResultMessage(response); 
                 return;
             }
             default: {
-                throw new Error(`Unhandled message type: ${type}`);
+                await this._onErrorHandler(
+                    new Error(`Unhandled message type: ${type}`)
+                );
             }
         }
     }
 
-    async _handleBlocksResultMessage(message) {
-        if (this._blockRangeRequest.inProgress) {
-            const block = Block.create(message, this._abi, this._blockRangeRequest);
+    async _ackGetBlocksRequests(count = 1) {
+        try {
+            const { types } = this._abi;
+            this._source.send(
+                serializeMessage(
+                    'request',
+                    ['get_blocks_ack_request_v0', { num_messages: count }],
+                    types
+                ),
+            );
+        } catch (error) {
+            await this._onErrorHandler(error);
+        }
+    }
 
+    async _handleBlocksResultMessage(message) {
+        if (this._blockRangeRequest) {
+            const block = Block.create(message, this._abi, this._blockRangeRequest);
             await this._receivedBlockHandler(block);
 
             // If received block is the last one call onComplete handler
             if (block.isLast) {
-                this._blockRangeRequest.inProgress = false;
+                this._blockRangeRequest = null;
                 await this._blockRangeCompleteHandler(blockRange);
             }
 
@@ -95,12 +119,12 @@ class StateHistoryService {
             // there is no need to ack request.
             if (this._connected) {
                 // Acknowledge a request so that source can send next one.
-                this._source.ackGetBlocksRequests();
+                this._ackGetBlocksRequests();
             }
         } else {
-            throw new Error(
+            await this._onErrorHandler(new Error(
                 'Something went wrong we got a message while no block range is being processed'
-            );
+            ));
         }
     }
 
@@ -115,9 +139,9 @@ class StateHistoryService {
             !this._receivedBlockHandler ||
             !this._blockRangeCompleteHandler
         ) {
-            throw new Error(
-                'Set onReceivedBlock and onBlockRangeComplete handlers before calling connect()'
-            );
+            await this._onErrorHandler(new Error(
+                'Set handlers before calling connect()'
+            ));
         }
 
         if (!this._connected) {
@@ -132,22 +156,36 @@ class StateHistoryService {
 
     async requestBlocks(blocksRange, shouldFetchTraces, shouldFetchDeltas) {
         // still processing block range request?
-        if (this._blockRangeRequest.inProgress) {
-            throw new Error(`Error sending the block_range request, the current request was not completed or canceled`);
+        if (this._blockRangeRequest) {
+             await this._onErrorHandler(new Error(
+                `Error sending the block_range request, the current request was not completed or canceled`
+            ));
         }
 
-        if (this._connected) {
-            const { startBlock, endBlock } = blocksRange;
-            this._blockRangeRequest = new BlockRangeRequest(blocksRange, shouldFetchTraces, shouldFetchDeltas);
-            this._source.requestBlocks(
-                startBlock,
-                endBlock,
-                shouldFetchTraces,
-                shouldFetchDeltas,
+        if (!this._connected) {
+            await this._onErrorHandler(
+                new Error(`Client is not connected, requestBlocks cannot be called`)
             );
         }
 
-        throw new Error(`Client is not connected, requestBlocks cannot be called`);
+        this._blockRangeRequest = new BlockRangeRequest(blocksRange, shouldFetchTraces, shouldFetchDeltas);
+
+        try {
+            const { types } = this._abi;
+            const message = serializeMessage('request', ['get_blocks_request_v0', { 
+                irreversible_only: false,
+                start_block_num: blocksRange.start,
+                end_block_num: blocksRange.end,
+                max_messages_in_flight: 1,
+                have_positions: [],
+                fetch_block: true,
+                fetch_traces: shouldFetchTraces,
+                fetch_deltas: shouldFetchDeltas, 
+            }], types);
+            this._source.send(message);
+        } catch (error) {
+            this._onErrorHandler(error);
+        }
     }
 
     async onReceivedBlock(handler) {

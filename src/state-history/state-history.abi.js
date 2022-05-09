@@ -4,9 +4,11 @@ class StateHistoryAbi {
     _abi;
     _types;
 
-    static fromDto(dto) {
-        this._abi = JSON.parse(dto);
-        this._types = Serialize.getTypesFromAbi(Serialize.createInitialTypes(), abi);
+    static create(dto) {
+        const abi = JSON.parse(dto);
+        const types = Serialize.getTypesFromAbi(Serialize.createInitialTypes(), abi);
+
+        return new StateHistoryAbi(abi, types);
     }
 
     constructor(abi, types) {

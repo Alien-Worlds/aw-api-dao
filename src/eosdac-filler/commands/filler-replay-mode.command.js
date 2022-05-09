@@ -29,13 +29,13 @@ const queueBlockRangeMessages = async (startBlock, config, logger) => {
     const range = endBlock - startBlock;
     const defaultChunkSize = 5000;
     const chunkSizeByClusterSize = parseInt(range/ config.fillClusterSize);
-    // const chunkSize = Math.min(chunkSizeByClusterSize, defaultChunkSize);
-    const chunkSize = chunkSizeByClusterSize;
-    let from = startBlock;
+    const chunkSize = Math.min(chunkSizeByClusterSize, defaultChunkSize);
+    let from = parseInt(startBlock);
     let to = from + chunkSize;
     let i = 0;
     let messagesCount = 0;
     let chunksCount = parseInt(range/ chunkSize);
+    
     
     // because we operate on integers, we must make sure that we send
     // the appropriate number of messages to fill the entire range
@@ -55,7 +55,7 @@ const queueBlockRangeMessages = async (startBlock, config, logger) => {
         }
 
         messageService.send(
-            'block_range',
+            'aw_block_range',
             Buffer.concat([
                 new Int64BE(from).toBuffer(),
                 new Int64BE(to).toBuffer()
@@ -77,9 +77,10 @@ const runFillerReplayMode = async (options) => {
     const logger = require('../../connections/logger')('eosdac-filler', config.logger);
 
     if (cluster.isMaster) {
+        const { startBlock = 0 } = options;
+
         logger.info(`Replaying from ${startBlock} in parallel mode`);
 
-        const { startBlock = 0 } = options;
         const mainThread = new MainThread(config.fillClusterSize);
 
         mainThread.addMessageHandler('complete', (workerMessage) => {
