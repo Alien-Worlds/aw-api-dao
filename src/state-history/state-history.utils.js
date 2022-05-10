@@ -32,4 +32,10 @@ const parseDate = (fullStr) => {
     return dt.getTime()
 }
 
-module.exports = { serializeMessage, deserializeMessage, parseDate };
+const getBlockTimestamp = (block) => block 
+    ? new Date(parseDate(block.timestamp.replace(['.000', '.500'], 'Z'))) 
+    : new Date();
+
+const log = (...args) => console.log(`process:${process.pid} | `, ...args);
+
+module.exports = { serializeMessage, deserializeMessage, getBlockTimestamp, log };

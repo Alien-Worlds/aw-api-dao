@@ -6,6 +6,7 @@ const { loadConfig } = require('../../functions');
 const { MainThread } = require('../../common/main-thread');
 const { FillerWorker } = require('../filler-worker.thread');
 const { MessageService } = require('../../connections/message.service');
+const { log } = require("../../state-history/state-history.utils");
 const fetch = require('node-fetch');
 
 const queueBlockRangeMessages = async (startBlock, config, logger) => {
@@ -45,10 +46,6 @@ const queueBlockRangeMessages = async (startBlock, config, logger) => {
     }
 
     while (i < chunksCount) {
-        process.stdout.write(
-          `Sending ${messagesCount}/${chunksCount} messages\r`
-        );
-
         if (to > endBlock) {
           to = endBlock;
           i = chunksCount;
@@ -68,7 +65,7 @@ const queueBlockRangeMessages = async (startBlock, config, logger) => {
         messagesCount++;
     }
 
-    logger.info(`Queued ${messagesCount} jobs`);
+    log(`Queued ${messagesCount} jobs`);
 }
 
 const runFillerReplayMode = async (options) => {
@@ -79,7 +76,7 @@ const runFillerReplayMode = async (options) => {
     if (cluster.isMaster) {
         const { startBlock = 0 } = options;
 
-        logger.info(`Replaying from ${startBlock} in parallel mode`);
+        log(`Replaying from ${startBlock} in parallel mode`);
 
         const mainThread = new MainThread(config.fillClusterSize);
 
@@ -93,7 +90,7 @@ const runFillerReplayMode = async (options) => {
 
         mainThread.addMessageHandler('error', (workerMessage) => {
             const { pid, error } = workerMessage;
-            // log error
+            log(error);
             mainThread.removeWorker(pid);
             mainThread.addWorker();
         });
@@ -101,7 +98,7 @@ const runFillerReplayMode = async (options) => {
         await queueBlockRangeMessages(startBlock, config, logger);
         mainThread.initWorkers();
     } else {     
-        logger.info(`Listening to queue for block_range`);
+        log(`Listening to queue for block_range`);
 
         const filler = new FillerWorker(config);
         await filler.start();

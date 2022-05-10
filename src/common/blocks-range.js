@@ -27,7 +27,7 @@ class BlocksRange {
     }
     
     get key() {
-        return `${this._start}_${this._end}`;
+        return `${this._start}-${this._end}`;
     }
 }
 

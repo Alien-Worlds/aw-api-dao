@@ -27,7 +27,7 @@ class WaxNodeSource {
     }
 
     async _updateConnectionState(state, data) {
-        this.currentConnectionState = state;
+        this._connectionState = state;
 
         const handler = this._connectionChangeHandlers.get(state);
 
@@ -55,6 +55,10 @@ class WaxNodeSource {
         } else {
             this._connectionChangeHandlers.set(state, handler);
         }
+    }
+
+    get isConnected() {
+        return this._connectionState === connectionState.Connected;
     }
 
     async connect() {

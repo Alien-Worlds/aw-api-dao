@@ -4,7 +4,7 @@ const { WorkerThread } = require("../common/worker-thread");
 const { QueueName } = require("../connections/amq.source");
 const { MessageService } = require("../connections/message.service");
 const { StateHistoryService } = require("../state-history/state-history.service");
-const { parseDate } = require("../state-history/state-history.utils");
+const { getBlockTimestamp, log } = require("../state-history/state-history.utils");
 const { ActionHandler, TraceHandler, DeltaHandler } = require('../handlers');
 const DacDirectory = require('../dac-directory');
 
@@ -53,7 +53,6 @@ class FillerWorker extends WorkerThread {
                 logger: this._logger,
             });
         } catch (error) {
-            console.error(error);
             this.sendToMainThread(new WorkerMessage({
                 pid: this.id,
                 type: WorkerMessageType.Error,
@@ -64,26 +63,28 @@ class FillerWorker extends WorkerThread {
 
     async _onReceivedBlockRange(message) {
         try {
-            await this._dacDirectory.reload(); 
-            
             const blockRange = BlocksRange.create(message);
+            await this._dacDirectory.reload();
+
+            log('Received Block Range', blockRange.key);
+            
             const stateHistory = new StateHistoryService(this._config.eos);
             stateHistory.onReceivedBlock(block => this._processBlock(block));
             stateHistory.onBlockRangeComplete(async (range) => {
-                console.log('Completed block range', range);
+                log('Completed block range', range);
                 await stateHistory.disconnect();
                 this._messageService.ack(message);
             });
 
             await stateHistory.connect();
-
-            stateHistory.requestBlocks(
+            await stateHistory.requestBlocks(
                 blockRange,
-                !!this._traceHandler,
-                !!this._deltaHandler,
+                {
+                    shouldFetchTraces: !!this._traceHandler,
+                    shouldFetchDeltas: !!this._deltaHandler,
+                }
             );
         } catch (error) {
-            console.error(error);
             this.sendToMainThread(new WorkerMessage({
                 pid: this.id,
                 type: WorkerMessageType.Warning,
@@ -93,18 +94,22 @@ class FillerWorker extends WorkerThread {
     }
 
     async _processBlock(data) {
-        const { blockNumber, block, traces, deltas, abi } = data;
-        console.log('processing block...', blockNumber);
-        const blockTimestamp = block 
-            ? new Date(parseDate(block.timestamp.replace(['.000', '.500'], 'Z'))) 
-            : new Date();
-
-        if (deltas.length > 0){
-            this._deltaHandler.processDelta(blockNumber, deltas, abi.types, blockTimestamp)
+        const { blockNumber, range, block, traces, deltas, abi } = data;
+        const blockTimestamp = getBlockTimestamp(block);
+        
+        if (!(blockNumber % 1000)){
+            log(`StateReceiver : received block ${blockNumber}`);
+            log(`Start: ${range.start}, End: ${range.end}, Current: ${blockNumber}`);
         }
 
+        // Add Handle fork...
+
+        if (deltas.length > 0){
+            this._deltaHandler.processDelta(blockNumber, deltas, abi.types, blockTimestamp);
+        }
+        
         if (traces.length > 0){
-            this._traceHandler.processTrace(blockNumber, traces, blockTimestamp)
+            this._traceHandler.processTrace(blockNumber, traces, blockTimestamp);
         }
     }
 }

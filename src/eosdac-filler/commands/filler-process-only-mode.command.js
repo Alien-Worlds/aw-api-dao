@@ -2,6 +2,7 @@ const cluster = require('cluster');
 const { loadConfig } = require('../../functions');
 const { MainThread } = require('../../common/main-thread');
 const { FillerWorker } = require('../filler-worker.thread');
+const { log } = require("../../state-history/state-history.utils");
 
 const runFillerProcessOnlyMode = async () => {
 
@@ -9,7 +10,7 @@ const runFillerProcessOnlyMode = async () => {
     const logger = require('../../connections/logger')('eosdac-filler', config.logger);
 
     if (cluster.isMaster) {
-        logger.info(`Starting block_range listener only`);
+        log(`Starting block_range listener only`);
 
         const mainThread = new MainThread(config.fillClusterSize);
 
@@ -30,7 +31,7 @@ const runFillerProcessOnlyMode = async () => {
 
         mainThread.initWorkers();
     } else {
-        logger.info(`Listening to queue for block_range ONLY`);
+        log(`Listening to queue for block_range ONLY`);
 
         const filler = new FillerWorker(config);
         await filler.start();

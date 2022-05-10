@@ -22,7 +22,7 @@ class MessageService {
         this._source.addListener(queue, handler);
     }
 
-    send(queue, message) {
+    async send(queue, message) {
         this._source.send(queue, message);
     }
 

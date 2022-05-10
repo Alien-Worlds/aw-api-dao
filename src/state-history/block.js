@@ -3,6 +3,7 @@ const { deserializeMessage } = require("./state-history.utils");
 class Block {
 
     _blockNumber;
+    _range;
     _block;
     _traces;
     _deltas;
@@ -41,12 +42,13 @@ class Block {
     
         const isLast = block_num === blockRange.endBlock - 1;
     
-        return new Block(abi, block_num, deserializedBlock, deserializedTraces, deserializedDeltas, isLast)
+        return new Block(abi, block_num, blockRange, deserializedBlock, deserializedTraces, deserializedDeltas, isLast)
     }
 
-    constructor(abi, blockNumber, block, traces, deltas, isLast) {
+    constructor(abi, blockNumber, range, block, traces, deltas, isLast) {
         this._abi = abi;
         this._blockNumber = blockNumber;
+        this._range = range;
         this._traces = traces;
         this._deltas = deltas;
         this._block = block;
@@ -59,6 +61,10 @@ class Block {
 
     get blockNumber() {
         return this._blockNumber;
+    }
+    
+    get range() {
+        return this._range;
     }
 
     get block() {

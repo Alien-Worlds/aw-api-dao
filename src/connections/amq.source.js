@@ -287,9 +287,9 @@ class AmqSource {
    * @param {Buffer} message
    * @param {Function} callback
    */
-  send(queue, message) {
+  async send(queue, message) {
     try {
-      this._channel.sendToQueue(queue, message);
+      return this._channel.sendToQueue(queue, message);
     } catch (error) {
       log(`ERROR: Failed to send message`, error);
     }
@@ -320,9 +320,9 @@ class AmqSource {
    *
    * @param {Message} message
    */
-  ack(message) {
+  async ack(message) {
     try {
-      this._channel.ack(message);
+      return this._channel.ack(message);
     } catch (error) {
       log(`ERROR: Failed to ack message`, error);
     }
@@ -333,9 +333,9 @@ class AmqSource {
    *
    * @param {Message} message
    */
-  reject(message) {
+  async reject(message) {
     try {
-      this._channel.reject(message, true);
+      return this._channel.reject(message, true);
     } catch (error) {
       log(`ERROR: Failed to reject message`, error);
     }
