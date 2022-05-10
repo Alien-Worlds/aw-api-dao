@@ -79,7 +79,7 @@ class StateHistoryService {
         } else if (message.isGetBlocksResult) {
             await this._handleBlocksResultMessage(message.content); 
         } else {
-            await this._handleError(new UnhandledMessageTypeError());
+            await this._handleError(new UnhandledMessageTypeError(message.type));
         }
     }
 
@@ -91,7 +91,7 @@ class StateHistoryService {
             // If received block is the last one call onComplete handler
             if (block.isLast) {
                 this._blockRangeRequest = null;
-                await this._blockRangeCompleteHandler(blockRange);
+                await this._blockRangeCompleteHandler(block.range);
             }
 
             // State history plugs will answer every call of ack_request, even after
@@ -104,7 +104,7 @@ class StateHistoryService {
                 this._source.send(new GetBlocksAckRequest(1, types).toUint8Array());
             }
         } catch (error) {
-            return this._handleError(new UnhandledMessageError());
+            return this._handleError(new UnhandledMessageError(message, error));
         }
     }
 

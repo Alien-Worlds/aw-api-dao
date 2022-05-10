@@ -12,9 +12,10 @@ class UnhandledMessageTypeError extends Error {
 }
 
 class UnhandledMessageError extends Error {
-    constructor(message) {
+    constructor(message, error) {
         super('Received a message while no block range is being processed');
         this.message = message;
+        this.error = error;
     }
 }
 

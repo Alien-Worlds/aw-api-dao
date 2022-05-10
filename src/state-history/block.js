@@ -39,8 +39,8 @@ class Block {
         if (shouldFetchDeltas && deltas && deltas.length > 0){
             deserializedDeltas = deserializeMessage('table_delta[]', deltas, types);
         }
-    
-        const isLast = block_num === blockRange.endBlock - 1;
+
+        const isLast = block_num === blockRange.end - 1;
     
         return new Block(abi, block_num, blockRange, deserializedBlock, deserializedTraces, deserializedDeltas, isLast)
     }
