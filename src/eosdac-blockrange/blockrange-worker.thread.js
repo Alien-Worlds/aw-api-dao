@@ -8,13 +8,14 @@ const { getBlockTimestamp, log } = require("../state-history/state-history.utils
 const { ActionHandler, TraceHandler, DeltaHandler } = require('../handlers');
 const DacDirectory = require('../dac-directory');
 
-class FillerWorker extends WorkerThread {
+class BlockRangeWorker extends WorkerThread {
     _messageService;
     _config;
     _dacDirectory;
     _actionHandler;
     _traceHandler;
     _deltaHandler;
+    _forkHandler;
     _logger;
 
     constructor(config) {
@@ -29,7 +30,7 @@ class FillerWorker extends WorkerThread {
             await this._messageService.init();
 
             this._messageService.addListener(
-                QueueName.AlienWorldsBlockRange,
+                QueueName.BlockRange,
                 (data) => this._onReceivedBlockRange(data)
             );
 
@@ -93,17 +94,15 @@ class FillerWorker extends WorkerThread {
         }
     }
 
-    async _processBlock(data) {
-        const { blockNumber, range, block, traces, deltas, abi } = data;
+    async _processBlock(blockData) {
+        const { blockNumber, range, block, traces, deltas, abi } = blockData;
         const blockTimestamp = getBlockTimestamp(block);
         
         if (!(blockNumber % 1000)){
             log(`StateReceiver : received block ${blockNumber}`);
             log(`Start: ${range.start}, End: ${range.end}, Current: ${blockNumber}`);
         }
-
-        // Add Handle fork...
-
+        
         if (deltas.length > 0){
             this._deltaHandler.processDelta(blockNumber, deltas, abi.types, blockTimestamp);
         }
@@ -114,4 +113,4 @@ class FillerWorker extends WorkerThread {
     }
 }
 
-module.exports = { FillerWorker };
+module.exports = { BlockRangeWorker };
