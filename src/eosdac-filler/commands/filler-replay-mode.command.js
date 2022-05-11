@@ -8,7 +8,7 @@ const { log } = require("../../state-history/state-history.utils");
 
 const runFillerReplayMode = async (options) => {
     const config = loadConfig();
-    const { startBlock = 0 } = options;
+    const { startBlock = 0,  } = options;
 
     log(`Replaying from ${startBlock} in parallel mode`);
 
@@ -27,7 +27,9 @@ const runFillerReplayMode = async (options) => {
     const messageService = new MessageService(config.amq.connectionString);
     await messageService.init();
     
-    const endBlock = lastIrreversibleBlock;
+    const endBlock = options.endBlock 
+        ? parseInt(options.endBlock)
+        : lastIrreversibleBlock;
     const range = endBlock - startBlock;
     const defaultChunkSize = 5000;
     const chunkSizeByClusterSize = parseInt(range/ config.fillClusterSize);
