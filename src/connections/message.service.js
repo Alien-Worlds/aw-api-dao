@@ -11,6 +11,10 @@ class MessageService {
         await this._source.init();
     }
 
+    async getQueueStats(queue) {
+        return this._source.getQueueStats(queue);
+    }
+
     onConnected(handler) {
         this._source.onConnected(handler);
     }

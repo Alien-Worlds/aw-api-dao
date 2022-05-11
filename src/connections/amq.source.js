@@ -281,6 +281,29 @@ class AmqSource {
   }
 
   /**
+   * Returns the current queue statistics
+   * 
+   * @param {string} queue 
+   * @returns {} Object
+   *  {
+   *    queue: string,
+   *    messageCount: number,
+   *    consumerCount: number
+   *  }
+   */
+  async getQueueStats(queue) {
+    if (
+      queue === QueueName.Action ||
+      queue === QueueName.BlockRange ||
+      queue === QueueName.RecalcAsset
+    ) {
+      return this._channel.assertQueue(queue, { durable: true });
+    }
+
+    throw new Error(`Unknown queue ${queue}`);
+  }
+
+  /**
    * Send a single message with the content given as a buffer to the specific queue named, bypassing routing.
    *
    * @param {string} queue

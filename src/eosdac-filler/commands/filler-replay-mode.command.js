@@ -1,17 +1,16 @@
 const fetch = require('node-fetch');
-const Int64BE = require('int64-buffer').Int64BE;
+
 const { Api, JsonRpc } = require('@jafri/eosjs2');
 const { TextDecoder, TextEncoder } = require('text-encoding');
 const { loadConfig } = require('../../functions');
 const { MessageService } = require('../../connections/message.service');
 const { log } = require("../../state-history/state-history.utils");
+const { BlocksRangeQueueRepository } = require('../../common/block-range-queue.repository');
+const { BlocksRange } = require('../../common/blocks-range');
+const { QueueName } = require('../../connections/amq.source');
 
-const runFillerReplayMode = async (options) => {
-    const config = loadConfig();
-    const { startBlock = 0,  } = options;
-
-    log(`Replaying from ${startBlock} in parallel mode`);
-
+const createBlocksRangeQueue = (options) => {
+    const { startBlock = 0 } = options;
     const rpc = new JsonRpc(config.eos.endpoint, {fetch});
     const api = new Api({
         rpc,
@@ -20,13 +19,9 @@ const runFillerReplayMode = async (options) => {
         textDecoder: new TextDecoder(),
         textEncoder: new TextEncoder(),
     });
-    
+    const blocksRanges = [];
     const info = await api.rpc.get_info();
     const lastIrreversibleBlock = info.last_irreversible_block_num;
-
-    const messageService = new MessageService(config.amq.connectionString);
-    await messageService.init();
-    
     const endBlock = options.endBlock 
         ? parseInt(options.endBlock)
         : lastIrreversibleBlock;
@@ -34,10 +29,10 @@ const runFillerReplayMode = async (options) => {
     const defaultChunkSize = 5000;
     const chunkSizeByClusterSize = parseInt(range/ config.fillClusterSize);
     const chunkSize = Math.min(chunkSizeByClusterSize, defaultChunkSize);
+    
     let from = parseInt(startBlock);
     let to = from + chunkSize;
     let i = 0;
-    let messagesCount = 0;
     let chunksCount = parseInt(range/ chunkSize);
 
     // because we operate on integers, we must make sure that we send
@@ -53,21 +48,34 @@ const runFillerReplayMode = async (options) => {
           i = chunksCount;
         }
     
-        messageService.send(
-            'aw_block_range',
-            Buffer.concat([
-                new Int64BE(from).toBuffer(),
-                new Int64BE(to).toBuffer()
-            ])
-        );
+        blocksRanges.push(new BlocksRange(from, to));
     
         from += chunkSize;
         to += chunkSize;
         i++;
-        messagesCount++;
     }
+
+    return blocksRanges;
+}
+
+const runFillerReplayMode = async (options) => {
+    const config = loadConfig();
+
+    log(`Replaying from ${startBlock} in parallel mode`);
     
-    log(`Queued ${messagesCount} jobs`);
+    const blocksRangeQueue = await createBlocksRangeQueue(options);
+    const messageService = new MessageService(config.amq.connectionString);
+    await messageService.init();
+
+    blocksRangeQueue.forEach(blockRange => {
+        messageService.send(QueueName.BlockRange, blockRange.toBuffer());
+    });
+
+    // const queueRepository = new BlocksRangeQueueRepository();
+    // await queueRepository.init();
+    // await queueRepository.addMultipleBlocksRange(blocksRanges);
+    
+    log(`Queued ${blocksRangeQueue.length} jobs`);
 }
 
 module.exports = { runFillerReplayMode };
