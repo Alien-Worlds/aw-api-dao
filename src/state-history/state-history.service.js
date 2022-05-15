@@ -9,15 +9,14 @@ const {
 } = require("./state-history.errors");
 const { GetBlocksAckRequest, GetBlocksRequest } = require("./state-history.requests");
 const { StateHistoryMessage } = require("./state-history.message");
+const { BlocksRange } = require("../common/blocks-range");
 
 const log = (...args) => console.log(`process:${process.pid} | `, ...args);
 
 class BlockRangeRequest {
     _blockRange;
     _shouldFetchTraces;
-    _shouldFetchDeltas
-    
-    inProgress = true;
+    _shouldFetchDeltas;
 
     constructor(blockRange, { shouldFetchTraces, shouldFetchDeltas }) {
         this._blockRange = blockRange;
@@ -45,7 +44,9 @@ class StateHistoryService {
     _connected = false;
     _receivedBlockHandler;
     _blockRangeCompleteHandler;
-    _onErrorHandler = log;
+    _disconnectHandler;
+    _errorHandler = log;
+    _warningHandler = log;
 
     constructor(config) {
         this._source = new WaxNodeSource(
@@ -85,15 +86,21 @@ class StateHistoryService {
 
     async _handleBlocksResultMessage(message) {
         try {
-            const block = Block.create(message, this._abi, this._blockRangeRequest);
-            await this._receivedBlockHandler(block);
+            if (message.this_block) {
+                const block = Block.create(message, this._abi, this._blockRangeRequest);
+                await this._receivedBlockHandler(block);
 
-            // If received block is the last one call onComplete handler
-            if (block.isLast) {
-                this._blockRangeRequest = null;
-                await this._blockRangeCompleteHandler(block.range);
+                // If received block is the last one call onComplete handler
+                if (block.isLast) {
+                    const { startBlock, endBlock, blockNumber } = block;
+                    this._blockRangeRequest = null;
+                    await this._blockRangeCompleteHandler(
+                        new BlocksRange(startBlock, endBlock, blockNumber)
+                    );
+                }
+            } else {
+                await this._handleWarning(`the received message does not contain this_block`);
             }
-
             // State history plugs will answer every call of ack_request, even after
             // processing the full range, it will send messages containing only head.
             // After the block has been processed, the connection should be closed so
@@ -104,13 +111,20 @@ class StateHistoryService {
                 this._source.send(new GetBlocksAckRequest(1, types).toUint8Array());
             }
         } catch (error) {
+            log(error);
             return this._handleError(new UnhandledMessageError(message, error));
         }
     }
 
     async _handleError(error) {
-        if (this._onErrorHandler) {
-            return this._onErrorHandler(error);
+        if (this._errorHandler) {
+            return this._errorHandler(error);
+        }
+    }
+    
+    async _handleWarning(...args) {
+        if (this._warningHandler) {
+            return this._warningHandler(...args);
         }
     }
 
@@ -131,7 +145,7 @@ class StateHistoryService {
 
     async disconnect() {
         if (this._source.isConnected) {
-            await this._source.disconnect();
+            return this._source.disconnect();
         }
     }
 
@@ -161,8 +175,17 @@ class StateHistoryService {
     async onBlockRangeComplete(handler) {
         this._blockRangeCompleteHandler = handler;
     }
+
+    _onConnected(abi) {
+        this._abi = StateHistoryAbi.create(abi);
+    }
+
     async onError(handler) {
-        this._onErrorHandler = handler;
+        this._errorHandler = handler;
+    }
+    
+    async onWarning(handler) {
+        this._warningHandler = handler;
     }
 }
 

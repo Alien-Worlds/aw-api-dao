@@ -7,7 +7,7 @@
   "scripts": {
     "api":"node src/eosdac-api.js",
     "processor":"node src/eosdac-processor.js",
-    "blockrange":"node src/eosdac-blockrange.js",
+    "blockrange":"node src/eosdac-blockrange/index.js",
     "filler":"node src/eosdac-filler/index.js ${flags}",
     "ws":"node src/eosdac-ws.js"
   },

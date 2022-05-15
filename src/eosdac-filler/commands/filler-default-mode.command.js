@@ -58,7 +58,7 @@ const runFillerDefaultMode = async (options) => {
     }
 
     const stateHistory = new StateHistoryService(this._config.eos);
-    stateHistory.onReceivedBlock(block => {
+    stateHistory.onReceivedBlock(async (block) => {
         await processBlock(
             block,
             processedBlock,

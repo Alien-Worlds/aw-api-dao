@@ -1,4 +1,5 @@
 const WebSocket = require('ws');
+const { log } = require('./state-history.utils');
 
 const connectionState = {
     Connecting: 'connecting',
@@ -87,6 +88,7 @@ class WaxNodeSource {
                 await this._updateConnectionState(connectionState.Disconnecting);
                 this._client.removeAllListeners();
                 this._client.close();
+
                 await new Promise(resolve => this._client.once('close', resolve));
                 await this._updateConnectionState(connectionState.Idle);
             } catch (error) {

@@ -1,9 +1,10 @@
-const { deserializeMessage } = require("./state-history.utils");
+const { deserializeMessage, getBlockTimestamp } = require("./state-history.utils");
 
 class Block {
-
+    _blockTimestamp;
     _blockNumber;
-    _range;
+    _startBlock;
+    _endBlock;
     _block;
     _traces;
     _deltas;
@@ -14,7 +15,7 @@ class Block {
         const {
             shouldFetchTraces,
             shouldFetchDeltas,
-            blockRange
+            blockRange: { start, end }
         } = blockRangeRequest;
         const { types } = abi;
         const {
@@ -40,15 +41,38 @@ class Block {
             deserializedDeltas = deserializeMessage('table_delta[]', deltas, types);
         }
 
-        const isLast = block_num === blockRange.end - 1;
-    
-        return new Block(abi, block_num, blockRange, deserializedBlock, deserializedTraces, deserializedDeltas, isLast)
+        const timestamp = getBlockTimestamp(deserializedBlock);
+        const isLast = block_num === end - 1;
+
+        return new Block(
+            abi,
+            block_num,
+            timestamp,
+            start,
+            end,
+            deserializedBlock,
+            deserializedTraces,
+            deserializedDeltas,
+            isLast
+        );
     }
 
-    constructor(abi, blockNumber, range, block, traces, deltas, isLast) {
+    constructor(
+        abi,
+        blockNumber,
+        timestamp,
+        startBlock,
+        endBlock,
+        block,
+        traces,
+        deltas,
+        isLast
+    ) {
         this._abi = abi;
         this._blockNumber = blockNumber;
-        this._range = range;
+        this._blockTimestamp = timestamp;
+        this._startBlock = startBlock;
+        this._endBlock = endBlock;
         this._traces = traces;
         this._deltas = deltas;
         this._block = block;
@@ -63,8 +87,16 @@ class Block {
         return this._blockNumber;
     }
     
-    get range() {
-        return this._range;
+    get blockTimestamp() {
+        return this._blockTimestamp;
+    }
+    
+    get startBlock() {
+        return this._startBlock;
+    }
+    
+    get endBlock() {
+        return this._endBlock;
     }
 
     get block() {

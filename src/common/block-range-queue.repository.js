@@ -1,43 +1,128 @@
+const MongoClient = require('mongodb').MongoClient;
+const { loadConfig } = require('../functions');
 const { BlocksRange } = require('./blocks-range');
+const { BlocksRangeQueue } = require('./blocks-range-queue');
 
-class BlocksRangeQueueRepository {    
-    _collection;
+async function connectMongo(config) {
+    return new Promise((resolve, reject) => {
+        MongoClient.connect(config.mongo.url, {useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
+            if (err) {
+                console.error("\nFailed to connect\n", err);
+                reject(err)
+            } else if (client) {
+                console.log(`Connected to mongo at ${config.mongo.url}`);
+                resolve(client)
+            }
+        });
+    });
+}
+
+class BlocksRangeQueueRepository { 
+    _client;
+    _queueItemsCollection;
+    _queueCollection;
+
+    // Public
 
     async init() {
         const config = loadConfig();
-        const mongo = await connectMongo(config);
+        this._client = await connectMongo(config);
+        const db = this._client.db(config.mongo.dbName);
         //
-        this._collection = mongo.collection('blocks_range_queue');
-        this._collection.createIndex({
+        this._queueItemsCollection = db.collection('blocks_range_queue_items');
+        this._queueItemsCollection.createIndex({
             "key" : 1,
             "start" : 1,
             "end" : 1,
         }, {unique:true, background:true});
+        this._queueCollection = db.collection('blocks_range_queue');
+        this._queueCollection.createIndex({
+            "key" : 1,
+            "start_block" : 1,
+            "end_block" : 1,
+        }, {unique:true, background:true});
     }
 
-    async addBlocksRange(blocksRange) {
-        return this._collection.insertOne(blocksRange.toDocument());
-    }
+    async createBlockRangeQueue(startBlock, endBlock, lastIrreversibleBlock) {
+        const queue = BlocksRangeQueue.create(
+            startBlock,
+            endBlock,
+            lastIrreversibleBlock,
+        );
+        const session = this._client.startSession();
 
-    async addMultipleBlocksRange(blocksRanges) {
-        const documents = blocksRanges.map(range => range.toDocument());
+        try {
+            await session.withTransaction(async () => {
+                await this._queueCollection.insertOne(queue.toDocument());
+                const documents = queue.items.map(blocksRange => blocksRange.toDocument());
+                await this._queueItemsCollection.insertMany(documents);
+            }, {
+                readPreference: 'primary',
+                readConcern: { level: 'local' },
+                writeConcern: { w: 'majority' }
+            });
+        } finally {
+            await session.endSession();
+        }
 
-        return this._collection.insertMany(documents);
+        return queue;
     }
 
     async removeBlocksRange(blocksRange) {
-        const { key } = blocksRange;
-        return this._collection.deleteOne({ key });
+        const { key, start, end } = blocksRange;
+        console.log('Remove blocks Range', key)
+        const session = this._client.startSession();
+
+        try {
+            await session.withTransaction(async () => {
+                await this._queueCollection.updateOne(
+                    { $and: [
+                        { start_block: { $lte: start } },
+                        { end_block: { $gte: end } },
+                     ] },
+                    { $inc: { queue_size: -1 } }
+                );
+                await this._queueItemsCollection.deleteOne({ key });
+            }, {
+                readPreference: 'primary',
+                readConcern: { level: 'local' },
+                writeConcern: { w: 'majority' }
+            });
+        } finally {
+            await session.endSession();
+        }
+    }
+
+    async removeBlocksRangeQueue(queue) {
+        const { key } = queue;
+        console.log('Remove queue', key)
+        return this._queueCollection.deleteOne({ key });
+    }
+
+    async findBlocksRangesOfQueue(queue) {
+        const dtos = this._queueItemsCollection.find({
+            $and: [
+               { start: { $gte: queue.start } },
+               { end: { $lte: queue.end } },
+            ]
+         });
+
+        return dtos.map(dto => BlocksRange.fromDocument(dto));
     }
 
     async updateProcessedBlockNumber(blocksRange) {
         const { processedBlockNumber, key } = blocksRange;
-        return this._collection.updateOne(
+        return this._queueItemsCollection.updateOne(
             { key },
-            {
-                $set: { processedBlockNumber }
-            },
+            { $set: { processed_block_number: processedBlockNumber } },
         );
+    }
+    
+    async getQueueSize(queue) {
+        const { key } = queue;
+        const dto = await this._queueCollection.findOne({ key });
+
+        return dto ? dto.queue_size : NaN;
     }
 }
 
