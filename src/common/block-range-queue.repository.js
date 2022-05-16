@@ -99,15 +99,15 @@ class BlocksRangeQueueRepository {
         return this._queueCollection.deleteOne({ key });
     }
 
-    async findBlocksRangesOfQueue(queue) {
-        const dtos = this._queueItemsCollection.find({
+    async findBlocksRangeQueue(startBlock, endBlock) {
+        const dto = this._queueCollection.find({
             $and: [
-               { start: { $gte: queue.start } },
-               { end: { $lte: queue.end } },
+               { start_block: startBlock },
+               { end_block: endBlock },
             ]
          });
 
-        return dtos.map(dto => BlocksRange.fromDocument(dto));
+        return dto ? BlocksRangeQueue.fromDocument(dto) : null;
     }
 
     async updateProcessedBlockNumber(blocksRange) {

@@ -23,6 +23,22 @@ const getLastIrreversibleBlock = async (config) => {
     return info.last_irreversible_block_num;
 }
 
+const onBlockRangeCompleteMessage = async (message, messageService, queueRepository) => {
+    const blocksRange = BlocksRange.create(message);
+
+    log(`Main Filler thread received COMPLETE message ${blocksRange.key} IS DONE!`);
+
+    await queueRepository.removeBlocksRange(blocksRange);
+
+    const queueSize = await queueRepository.getQueueSize(blocksRangeQueue);
+
+    if (queueSize === 0) {
+        await queueRepository.removeBlocksRangeQueue(blocksRangeQueue);
+    }
+
+    messageService.ack(message);
+}
+
 const runFillerReplayMode = async (options) => {
     const config = loadConfig();
     const startBlock = options.startBlock || 0;
@@ -42,38 +58,36 @@ const runFillerReplayMode = async (options) => {
     const messageService = new MessageService(config.amq.connectionString);
     await messageService.init();
 
-    // Prepare a list of block ranges in the database to control the flow
-    // of the entire process.
-    const blocksRangeQueue = await queueRepository.createBlockRangeQueue(
-        startBlock,
-        endBlock,
-        lastIrreversibleBlock,
-    );
-
     // After receiving the message about the completed block range,
     // we can verify the overall status of the queue
-    messageService.addListener(QueueName.BlockRangeQueue, async (message) => {
-        const blocksRange = BlocksRange.create(message);
+    messageService.addListener(
+        QueueName.BlockRangeQueue,
+        async (message) =>
+            onBlockRangeCompleteMessage(message, messageService, queueRepository),
+    );
 
-        log(`Main Filler thread received COMPLETE message ${blocksRange.key} IS DONE!`);
-
-        await queueRepository.removeBlocksRange(blocksRange);
-
-        const queueSize = await queueRepository.getQueueSize(blocksRangeQueue);
-
-        if (queueSize === 0) {
-            await queueRepository.removeBlocksRangeQueue(blocksRangeQueue);
-        }
-        // if not we should ...
-        messageService.ack(message);
-    });
-
-    // Prepare tasks for the block range process
-    blocksRangeQueue.items.forEach(blockRange => {
-        messageService.send(QueueName.BlockRange, blockRange.toBuffer());
-    });
+    const unhandledMessages = await messageService.getQueueStats(QueueName.BlockRange).messageCount;
     
-    log(`Queued ${blocksRangeQueue.items.length} jobs`);
+    if (unhandledMessages === 0) {
+        // Prepare a list of block ranges in the database to control the flow
+        // of the entire process.
+        const blocksRangeQueue = await queueRepository.createBlockRangeQueue(
+            startBlock,
+            endBlock,
+            lastIrreversibleBlock,
+        );
+
+        // Prepare tasks for the block range process
+        blocksRangeQueue.items.forEach(blockRange => {
+            messageService.send(QueueName.BlockRange, blockRange.toBuffer());
+        });
+
+        log(`Queued ${blocksRangeQueue.items.length} jobs`);
+    }
+
+    // The queue contains the messages so most likely this process has been reset. 
+    // In this case, we do not create new messages, but continue our work from the place
+    // where we left off.
 }
 
 module.exports = { runFillerReplayMode };
