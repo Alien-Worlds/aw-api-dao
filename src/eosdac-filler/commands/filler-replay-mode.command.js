@@ -30,10 +30,10 @@ const onBlockRangeCompleteMessage = async (message, messageService, queueReposit
 
     await queueRepository.removeBlocksRange(blocksRange);
 
-    const queueSize = await queueRepository.getQueueSize(blocksRangeQueue);
+    const queueSize = await queueRepository.getQueueSize(blocksRange.queueKey);
 
     if (queueSize === 0) {
-        await queueRepository.removeBlocksRangeQueue(blocksRangeQueue);
+        await queueRepository.removeBlocksRangeQueue(blocksRange.queueKey);
     }
 
     messageService.ack(message);
@@ -66,9 +66,18 @@ const runFillerReplayMode = async (options) => {
             onBlockRangeCompleteMessage(message, messageService, queueRepository),
     );
 
-    const unhandledMessages = await messageService.getQueueStats(QueueName.BlockRange).messageCount;
+    const { 
+        messageCount: unhandledMessages
+    } = await messageService.getQueueStats(QueueName.BlockRange);
+    const unfinishedQueue = 
+        await queueRepository.findBlocksRangeQueue(startBlock, endBlock);
     
-    if (unhandledMessages === 0) {
+    // if (unhandledMessages === 0 && unfinishedQueue) {
+    //      we have to recreate a list of ranges and send it to the amq so that
+    //      blockrange processes can start
+    // }
+
+    if (unhandledMessages === 0 && unfinishedQueue === null) {
         // Prepare a list of block ranges in the database to control the flow
         // of the entire process.
         const blocksRangeQueue = await queueRepository.createBlockRangeQueue(

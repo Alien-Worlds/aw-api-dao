@@ -107,7 +107,7 @@ class BlockRangeWorker extends WorkerThread {
         // process received block
         await this._processBlock(block);
         // notify main thread about processed block
-        const { startBlock, endBlock, blockNumber } = block;
+        const { startBlock, endBlock, blockNumber, queueKey } = block;
 
         this.sendToMainThread(new WorkerMessage({
             pid: this.id,
@@ -115,6 +115,7 @@ class BlockRangeWorker extends WorkerThread {
             content: new BlocksRange(
                 startBlock,
                 endBlock,
+                queueKey,
                 blockNumber).toJson(),
         }));
     }

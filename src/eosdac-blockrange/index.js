@@ -34,9 +34,9 @@ const start = async (options) => {
             WorkerMessageType.ProcessedBlock,
             async (message) => {
                 const { content: 
-                    { start, end, processedBlockNumber }
+                    { start, end, processedBlockNumber, queueKey }
                 } = message;
-                const blocksRange = new BlocksRange(start, end, processedBlockNumber);
+                const blocksRange = new BlocksRange(start, end, queueKey, processedBlockNumber);
                 await queueRepository.updateProcessedBlockNumber(blocksRange);
             }
         );
@@ -50,10 +50,9 @@ const start = async (options) => {
             async (message) => {
                 log(`Main BlockRange thread received COMPLETE MESSGAE FROM WORKER ${message.pid} IS DONE!`);
                 const { content: 
-                    { start, end, processedBlockNumber }
+                    { start, end, processedBlockNumber, queueKey }
                 } = message;
-                const blocksRange = new BlocksRange(start, end, processedBlockNumber)
-                await queueRepository.removeBlocksRange(blocksRange);
+                const blocksRange = new BlocksRange(start, end, queueKey, processedBlockNumber)
                 await messageService.send(QueueName.BlockRangeQueue, BlocksRange.toBuffer(blocksRange));
             }
         );

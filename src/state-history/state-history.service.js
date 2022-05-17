@@ -92,10 +92,10 @@ class StateHistoryService {
 
                 // If received block is the last one call onComplete handler
                 if (block.isLast) {
-                    const { startBlock, endBlock, blockNumber } = block;
+                    const { startBlock, endBlock, blockNumber, queueKey } = block;
                     this._blockRangeRequest = null;
                     await this._blockRangeCompleteHandler(
-                        new BlocksRange(startBlock, endBlock, blockNumber)
+                        new BlocksRange(startBlock, endBlock, queueKey, blockNumber)
                     );
                 }
             } else {

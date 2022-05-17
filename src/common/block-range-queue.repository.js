@@ -1,6 +1,5 @@
 const MongoClient = require('mongodb').MongoClient;
 const { loadConfig } = require('../functions');
-const { BlocksRange } = require('./blocks-range');
 const { BlocksRangeQueue } = require('./blocks-range-queue');
 
 async function connectMongo(config) {
@@ -70,7 +69,8 @@ class BlocksRangeQueueRepository {
 
     async removeBlocksRange(blocksRange) {
         const { key, start, end } = blocksRange;
-        console.log('Remove blocks Range', key)
+        console.log('Remove blocks Range', key);
+
         const session = this._client.startSession();
 
         try {
@@ -79,7 +79,7 @@ class BlocksRangeQueueRepository {
                     { $and: [
                         { start_block: { $lte: start } },
                         { end_block: { $gte: end } },
-                     ] },
+                    ] },
                     { $inc: { queue_size: -1 } }
                 );
                 await this._queueItemsCollection.deleteOne({ key });
@@ -93,14 +93,13 @@ class BlocksRangeQueueRepository {
         }
     }
 
-    async removeBlocksRangeQueue(queue) {
-        const { key } = queue;
+    async removeBlocksRangeQueue(key) {
         console.log('Remove queue', key)
         return this._queueCollection.deleteOne({ key });
     }
 
     async findBlocksRangeQueue(startBlock, endBlock) {
-        const dto = this._queueCollection.find({
+        const dto = await this._queueCollection.findOne({
             $and: [
                { start_block: startBlock },
                { end_block: endBlock },
@@ -118,10 +117,8 @@ class BlocksRangeQueueRepository {
         );
     }
     
-    async getQueueSize(queue) {
-        const { key } = queue;
+    async getQueueSize(key) {
         const dto = await this._queueCollection.findOne({ key });
-
         return dto ? dto.queue_size : NaN;
     }
 }

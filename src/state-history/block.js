@@ -5,6 +5,7 @@ class Block {
     _blockNumber;
     _startBlock;
     _endBlock;
+    _queueKey;
     _block;
     _traces;
     _deltas;
@@ -15,7 +16,7 @@ class Block {
         const {
             shouldFetchTraces,
             shouldFetchDeltas,
-            blockRange: { start, end }
+            blockRange: { start, end, queueKey }
         } = blockRangeRequest;
         const { types } = abi;
         const {
@@ -24,7 +25,7 @@ class Block {
             traces,
             deltas
         } = blockMessage;
-    
+
         let deserializedBlock;
         let deserializedTraces = [];
         let deserializedDeltas = [];
@@ -50,6 +51,7 @@ class Block {
             timestamp,
             start,
             end,
+            queueKey,
             deserializedBlock,
             deserializedTraces,
             deserializedDeltas,
@@ -63,6 +65,7 @@ class Block {
         timestamp,
         startBlock,
         endBlock,
+        queueKey,
         block,
         traces,
         deltas,
@@ -73,6 +76,7 @@ class Block {
         this._blockTimestamp = timestamp;
         this._startBlock = startBlock;
         this._endBlock = endBlock;
+        this._queueKey = queueKey;
         this._traces = traces;
         this._deltas = deltas;
         this._block = block;
@@ -97,6 +101,10 @@ class Block {
     
     get endBlock() {
         return this._endBlock;
+    }
+    
+    get queueKey() {
+        return this._queueKey;
     }
 
     get block() {
