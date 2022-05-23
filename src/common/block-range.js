@@ -67,7 +67,8 @@ class BlockRange {
             );
 
             if (end - start > maxChunkSize) {
-                rangesToPersist.push(...BlockRange.createChildRanges(range, numberOfChildren, maxChunkSize))
+                const childRanges = BlockRange.createChildRanges(range, numberOfChildren, maxChunkSize);
+                childRanges.forEach(range => rangesToPersist.push(range));
             } else {
                 range.setAsLeafNode();
             }

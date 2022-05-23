@@ -51,6 +51,7 @@ const runFillerReplayMode = async (options) => {
         log(`block_range process will continue this scan.`);
     } else {
         await rangeRepository.createBlockRange(startBlock, endBlock);
+        log(`Created "${scanKey}" block range (${startBlock}-${endBlock})`);
     }
 }
 

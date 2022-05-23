@@ -6,7 +6,7 @@ module.exports = {
     blockRange: {
         clusterSize: 4,    
         numberOfChildren: 4,
-        minChunkSize: 32,
+        minChunkSize: 5000,
     },
     fillClusterSize: 4,
     clusterSize: 10,

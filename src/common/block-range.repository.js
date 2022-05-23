@@ -108,10 +108,8 @@ class BlockRangeRepository {
         } = this._config;
         const rootRange = BlockRange.create(startBlock, endBlock, scanKey, 0);
         const rangesToPersist = [rootRange];
-
-        rangesToPersist.push(
-            ...BlockRange.createChildRanges(rootRange, numberOfChildren, minChunkSize)
-        );
+        const childRanges = BlockRange.createChildRanges(rootRange, numberOfChildren, minChunkSize);
+        childRanges.forEach(range => rangesToPersist.push(range));
 
         const documents = rangesToPersist.map(range => range.toDocument());
         await this._collection.insertMany(documents);
