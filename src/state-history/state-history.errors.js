@@ -26,8 +26,8 @@ class MissingHandlersError extends Error {
 }
 
 class UnhandledBlocksRequestError extends Error {
-    constructor(blocksRange) {
-        super(`Error sending the block_range request ${blocksRange.key}. The current request was not completed or canceled.`);
+    constructor(blockRange) {
+        super(`Error sending the block_range request ${blockRange.key}. The current request was not completed or canceled.`);
     }
 }
 

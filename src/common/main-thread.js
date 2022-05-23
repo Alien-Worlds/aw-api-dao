@@ -1,20 +1,21 @@
 const cluster = require('cluster');
 
 class MainThread {
-    _workersCount;
+    _maxWorkersCount;
     _workersByPid = new Map();
     _handlersByMessageType = new Map();
+    _workerReadyHandler;
 
-    constructor(workersCount){
-        this._workersCount = workersCount;
+    constructor(maxWorkersCount){
+        this._maxWorkersCount = maxWorkersCount;
     }
 
     get workersCount() {
-        return this._workersCount;
+        return this._workersByPid.size;
     }
 
     initWorkers() {
-        for (let i = 0; i < this._workersCount; i++) {
+        for (let i = 0; i < this._maxWorkersCount; i++) {
             this._createWorker();
         }
     }
@@ -34,7 +35,7 @@ class MainThread {
     }
 
     addWorker() {
-        if (this._workersByPid.size < this._workersCount) {
+        if (this._workersByPid.size < this._maxWorkersCount) {
             this._createWorker();
         } else {
             // no more workers
@@ -42,7 +43,7 @@ class MainThread {
     }
 
     removeWorker(pid) {
-        const worker = this._workersByPid.get(workerMessage.pid);
+        const worker = this._workersByPid.get(pid);
 
         if (worker) {
             worker.kill();
@@ -52,13 +53,17 @@ class MainThread {
         }
     }
 
-    async _onWorkerMessage(workerMessage) {
-        const worker = this._workersByPid.get(workerMessage.pid);
-        const handler = this._handlersByMessageType.get(workerMessage.type);
+    onWorkerReady(handler) {
+        this._workerReadyHandler = handler;
+    }
 
-        if(worker) {
+    async _onWorkerMessage(message) {
+        const worker = this._workersByPid.get(message.pid);
+        const handler = this._handlersByMessageType.get(message.type);
+
+        if (worker) {
             if (handler) {
-                await handler(workerMessage);
+                await handler(message);
             }
         } else {
             //worker not defined
@@ -67,8 +72,11 @@ class MainThread {
 
     _createWorker() {
         const worker = cluster.fork();
-        worker.on('message', async (workerMessage) => this._onWorkerMessage(workerMessage));
+        worker.on('message', async (message) => this._onWorkerMessage(message));
         this._workersByPid.set(worker.process.pid, worker);
+        if (this._workerReadyHandler) {
+            this._workerReadyHandler(worker.id);
+        }
     }
 }
 

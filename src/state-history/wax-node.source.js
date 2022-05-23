@@ -88,8 +88,10 @@ class WaxNodeSource {
                 await this._updateConnectionState(connectionState.Disconnecting);
                 this._client.removeAllListeners();
                 this._client.close();
-
-                await new Promise(resolve => this._client.once('close', resolve));
+                await new Promise(resolve => this._client.once('close', () => {
+                    return resolve();
+                }));
+                this._client = null;
                 await this._updateConnectionState(connectionState.Idle);
             } catch (error) {
                 this._errorHandler(error);

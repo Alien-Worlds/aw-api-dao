@@ -7,7 +7,7 @@ const {
 const DacDirectory = require('../../dac-directory');
 const { MessageService } = require('../../connections/message.service');
 const { loadConfig, getRestartBlock } = require('../../functions');
-const { BlocksRange } = require('../../common/blocks-range');
+const { BlockRange } = require('../../common/block-range');
 const { getBlockTimestamp } = require('../../state-history/state-history.utils');
 const { StateHistoryService } = require('../../state-history/state-history.service');
 
@@ -69,7 +69,7 @@ const runFillerDefaultMode = async (options) => {
 
     await stateHistory.connect();
     await stateHistory.requestBlocks(
-        new BlocksRange(startBlock),
+        new BlockRange(startBlock),
         {
             shouldFetchTraces: true,
             shouldFetchDeltas: true,

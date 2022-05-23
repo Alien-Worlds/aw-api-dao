@@ -3,100 +3,55 @@ const fetch = require('node-fetch');
 const { Api, JsonRpc } = require('@jafri/eosjs2');
 const { TextDecoder, TextEncoder } = require('text-encoding');
 const { loadConfig } = require('../../functions');
-const { MessageService } = require('../../connections/message.service');
 const { log } = require("../../state-history/state-history.utils");
-const { BlocksRangeQueueRepository } = require('../../common/block-range-queue.repository');
-const { BlocksRange } = require('../../common/blocks-range');
-const { QueueName } = require('../../connections/amq.source');
+const { BlockRangeRepository } = require('../../common/block-range.repository');
 const { defaultEndBlock } = require('../filler.defaults');
 
 const getLastIrreversibleBlock = async (config) => {
-    const rpc = new JsonRpc(config.eos.endpoint, {fetch});
-    const api = new Api({
-        rpc,
-        signatureProvider: null,
-        chainId: config.chainId,
-        textDecoder: new TextDecoder(),
-        textEncoder: new TextEncoder(),
-    });
-    const info = await api.rpc.get_info();
-    return info.last_irreversible_block_num;
-}
-
-const onBlockRangeCompleteMessage = async (message, messageService, queueRepository) => {
-    const blocksRange = BlocksRange.create(message);
-
-    log(`Main Filler thread received COMPLETE message ${blocksRange.key} IS DONE!`);
-
-    await queueRepository.removeBlocksRange(blocksRange);
-
-    const queueSize = await queueRepository.getQueueSize(blocksRange.queueKey);
-
-    if (queueSize === 0) {
-        await queueRepository.removeBlocksRangeQueue(blocksRange.queueKey);
+    try {
+        const rpc = new JsonRpc(config.eos.endpoint, {fetch});
+        const api = new Api({
+            rpc,
+            signatureProvider: null,
+            chainId: config.chainId,
+            textDecoder: new TextDecoder(),
+            textEncoder: new TextEncoder(),
+        });
+        const info = await api.rpc.get_info();
+        return info.last_irreversible_block_num;
+    } catch (error) {
+        log(error);
+        return -1;
     }
-
-    messageService.ack(message);
 }
 
 const runFillerReplayMode = async (options) => {
     const config = loadConfig();
+    const { scanKey } = config;
     const startBlock = options.startBlock || 0;
     const lastIrreversibleBlock = await getLastIrreversibleBlock(config);
     const endBlock = options.endBlock != defaultEndBlock 
         ? parseInt(options.endBlock)
         : lastIrreversibleBlock;
 
-    log(`Replaying from ${startBlock} in parallel mode`);
-    // What if the main thread has been interrupted and we have some
-    // unfinished queues? We check that the given starting and ending
-    // blocks are not in these queues
+    log(`Replaying from ${startBlock} to ${endBlock} in parallel mode`);
     
-    const queueRepository = new BlocksRangeQueueRepository();
-    await queueRepository.init();
+    const rangeRepository = new BlockRangeRepository();
+    await rangeRepository.init();
 
-    const messageService = new MessageService(config.amq.connectionString);
-    await messageService.init();
+    // Look for an incomplete scan that matches the scanKey given in config.
+    // If not found, create a new scan.
+    const blockRangesCount = await rangeRepository.countBlockRanges(scanKey, startBlock, endBlock);
 
-    // After receiving the message about the completed block range,
-    // we can verify the overall status of the queue
-    messageService.addListener(
-        QueueName.BlockRangeQueue,
-        async (message) =>
-            onBlockRangeCompleteMessage(message, messageService, queueRepository),
-    );
-
-    const { 
-        messageCount: unhandledMessages
-    } = await messageService.getQueueStats(QueueName.BlockRange);
-    const unfinishedQueue = 
-        await queueRepository.findBlocksRangeQueue(startBlock, endBlock);
-    
-    // if (unhandledMessages === 0 && unfinishedQueue) {
-    //      we have to recreate a list of ranges and send it to the amq so that
-    //      blockrange processes can start
-    // }
-
-    if (unhandledMessages === 0 && unfinishedQueue === null) {
-        // Prepare a list of block ranges in the database to control the flow
-        // of the entire process.
-        const blocksRangeQueue = await queueRepository.createBlockRangeQueue(
-            startBlock,
-            endBlock,
-            lastIrreversibleBlock,
-        );
-
-        // Prepare tasks for the block range process
-        blocksRangeQueue.items.forEach(blockRange => {
-            messageService.send(QueueName.BlockRange, blockRange.toBuffer());
-        });
-
-        log(`Queued ${blocksRangeQueue.items.length} jobs`);
+    if (blockRangesCount === 1) {
+        log(`Complete "${scanKey}" block range (${startBlock}-${endBlock}) scan was found.`);
+        log(`Aborting this scan request.`);
+    } else if (blockRangesCount > 1) {
+        log(`Incomplete "${scanKey}" block range (${startBlock}-${endBlock}) scan was found.`);
+        log(`block_range process will continue this scan.`);
+    } else {
+        await rangeRepository.createBlockRange(startBlock, endBlock);
     }
-
-    // The queue contains the messages so most likely this process has been reset. 
-    // In this case, we do not create new messages, but continue our work from the place
-    // where we left off.
 }
 
 module.exports = { runFillerReplayMode };

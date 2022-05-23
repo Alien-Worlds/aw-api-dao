@@ -13,7 +13,6 @@ class ChannelCancelledError extends Error {
 const QueueName = {
   Action: 'action',
   BlockRange: 'block_range',
-  BlockRangeQueue: 'block_range_queue',
   RecalcAsset: 'recalc_asset',
 }
 
@@ -212,9 +211,6 @@ class AmqSource {
       await this._channel.prefetch(1);
       await this._channel.assertQueue(QueueName.Action, { durable: true });
       await this._channel.assertQueue(QueueName.BlockRange, {
-        durable: true,
-      });
-      await this._channel.assertQueue(QueueName.BlockRangeQueue, {
         durable: true,
       });
       await this._channel.assertQueue(QueueName.RecalcAsset, { durable: true });

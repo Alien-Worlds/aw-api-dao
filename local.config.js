@@ -1,4 +1,13 @@
 module.exports = {
+    scanKey: 'test',
+    filler: {
+        clusterSize: 10,
+    },
+    blockRange: {
+        clusterSize: 6,    
+        numberOfChildren: 4,
+        minChunkSize: 32,
+    },
     fillClusterSize: 4,
     clusterSize: 10,
     mongo: {

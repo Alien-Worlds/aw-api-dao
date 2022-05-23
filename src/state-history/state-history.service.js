@@ -9,31 +9,14 @@ const {
 } = require("./state-history.errors");
 const { GetBlocksAckRequest, GetBlocksRequest } = require("./state-history.requests");
 const { StateHistoryMessage } = require("./state-history.message");
-const { BlocksRange } = require("../common/blocks-range");
 
 const log = (...args) => console.log(`process:${process.pid} | `, ...args);
 
 class BlockRangeRequest {
-    _blockRange;
-    _shouldFetchTraces;
-    _shouldFetchDeltas;
-
     constructor(blockRange, { shouldFetchTraces, shouldFetchDeltas }) {
-        this._blockRange = blockRange;
-        this._shouldFetchDeltas = shouldFetchDeltas;
-        this._shouldFetchTraces = shouldFetchTraces;
-    }
-
-    get blockRange() {
-        return this._blockRange;
-    }
-    
-    get shouldFetchTraces() {
-        return this._shouldFetchTraces;
-    }
-    
-    get shouldFetchDeltas() {
-        return this._shouldFetchDeltas;
+        this.blockRange = blockRange;
+        this.shouldFetchDeltas = shouldFetchDeltas;
+        this.shouldFetchTraces = shouldFetchTraces;
     }
 }
 
@@ -92,11 +75,9 @@ class StateHistoryService {
 
                 // If received block is the last one call onComplete handler
                 if (block.isLast) {
-                    const { startBlock, endBlock, blockNumber, queueKey } = block;
+                    const { range } = block;
                     this._blockRangeRequest = null;
-                    await this._blockRangeCompleteHandler(
-                        new BlocksRange(startBlock, endBlock, queueKey, blockNumber)
-                    );
+                    await this._blockRangeCompleteHandler(range);
                 }
             } else {
                 await this._handleWarning(`the received message does not contain this_block`);
@@ -149,17 +130,17 @@ class StateHistoryService {
         }
     }
 
-    async requestBlocks(blocksRange, options) {
+    async requestBlocks(blockRange, options) {
         // still processing block range request?
         if (this._blockRangeRequest) {
-             return this._handleError(new UnhandledBlocksRequestError(blocksRange));
+             return this._handleError(new UnhandledBlocksRequestError(blockRange));
         }
         
         try {
             const { types } = this._abi;
-            const { start, end } = blocksRange;
+            const { start, end } = blockRange;
 
-            this._blockRangeRequest = new BlockRangeRequest(blocksRange, options);
+            this._blockRangeRequest = new BlockRangeRequest(blockRange, options);
             this._source.send(
                 new GetBlocksRequest(start, end, options, types).toUint8Array()
             );

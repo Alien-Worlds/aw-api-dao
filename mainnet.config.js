@@ -1,13 +1,23 @@
 module.exports = {
+    scanKey: 'test',
+    filler: {
+        clusterSize: 10,
+    },
+    blockRange: {
+        clusterSize: 4,    
+        numberOfChildren: 4,
+        minChunkSize: 32,
+    },
+    fillClusterSize: 4,
+    clusterSize: 10,
     // redisPrefix: 'q',
-    fillClusterSize: 10,
-    clusterSize: 6,
     // redis: {
     //     port: 6379,
     //     host: '169.56.83.184',
     //     auth: ''
     // },
     mongo: {
+        // url: 'mongodb://localhost:27017',
         url: 'mongodb://eosdac-api-db-1:27017',
         dbName: 'alienworlds_dao_mainnet',
         traceCollection: 'traces',
@@ -30,6 +40,7 @@ module.exports = {
         //        endpoint: 'http://127.0.0.1:38888',
         //        wsEndpoint: 'ws://127.0.0.1:38080',
         //        wsEndpoints: ['ws://127.0.0.1:38080'],
+        // endpoint: 'https://waxnode.alienworlds.io',
         endpoint: 'https://wax.eosdac.io',
         wsEndpoint: 'ws://157.90.129.75:28080',
         wsEndpoints: ['ws://ship.alienworlds.io:28080'],

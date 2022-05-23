@@ -21,15 +21,6 @@ class DacDirectory {
 
         this.logger = require('./connections/logger')('dacdirectory', config.logger);
 
-        this.rpc = new JsonRpc(config.eos.endpoint, {fetch});
-        this.api = new Api({
-            rpc: this.rpc,
-            signatureProvider: null,
-            chainId: config.chainId,
-            textDecoder: new TextDecoder(),
-            textEncoder: new TextEncoder(),
-        });
-
         if (!this.config.eos.dacDirectoryContract && config.mode !== 'single'){
             throw new Error('You must specify eos.dacDirectoryContract in config');
         }
@@ -48,6 +39,15 @@ class DacDirectory {
     }
 
     async reload() {
+        this.rpc = new JsonRpc(this.config.eos.endpoint, {fetch});
+        this.api = new Api({
+            rpc: this.rpc,
+            signatureProvider: null,
+            chainId: this.config.chainId,
+            textDecoder: new TextDecoder(),
+            textEncoder: new TextEncoder(),
+        });
+
         this.interested_contracts = new Set();
         this._msig_contracts = new Map();
         this._custodian_contracts = new Map();
