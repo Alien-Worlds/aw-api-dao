@@ -40,19 +40,21 @@ const runFillerReplayMode = async (options) => {
     await rangeRepository.init();
 
     // Look for an incomplete scan that matches the scanKey given in config.
-    // If not found, create a new scan.
-    const blockRangesCount = await rangeRepository.countBlockRanges(scanKey, startBlock, endBlock);
+    // If found, block_range processes will continue this scan.
 
-    if (blockRangesCount === 1) {
-        log(`Complete "${scanKey}" block range (${startBlock}-${endBlock}) scan was found.`);
-        log(`Aborting this scan request.`);
-    } else if (blockRangesCount > 1) {
+    if (await rangeRepository.hasUnprocessedBlockRanges(scanKey, startBlock, endBlock)) {
         log(`Incomplete "${scanKey}" block range (${startBlock}-${endBlock}) scan was found.`);
-        log(`block_range process will continue this scan.`);
+        log(`block_range processes will continue scanning.`);
     } else {
-        await rangeRepository.createBlockRange(startBlock, endBlock);
-        log(`Created "${scanKey}" block range (${startBlock}-${endBlock})`);
+        if (await rangeRepository.hasScanKey(scanKey)) {
+            log(`The key "${scanKey}" has already been used. Please use a different scan key`);
+        } else {
+            await rangeRepository.createBlockRange(scanKey, startBlock, endBlock);
+            log(`Created "${scanKey}" block range (${startBlock}-${endBlock})`);
+            log(`block_range processes will scan this range.`);
+        }
     }
+    process.exit(0);
 }
 
 module.exports = { runFillerReplayMode };

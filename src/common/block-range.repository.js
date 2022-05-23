@@ -101,11 +101,11 @@ class BlockRangeRepository {
         return document ? BlockRange.fromDocument(document) : null;
     }
 
-    async createBlockRange(startBlock, endBlock) {
+    async createBlockRange(scanKey, startBlock, endBlock) {
         const {
-            scanKey,
             blockRange: { numberOfChildren, minChunkSize }
         } = this._config;
+
         const rootRange = BlockRange.create(startBlock, endBlock, scanKey, 0);
         const rangesToPersist = [rootRange];
         const childRanges = BlockRange.createChildRanges(rootRange, numberOfChildren, minChunkSize);
@@ -148,8 +148,7 @@ class BlockRangeRepository {
         await this._collection.deleteMany({ "_id.scan_key": scanKey })
     }
 
-    async findBlockRange(startBlock, endBlock) {
-        const { scanKey } = this._config;
+    async findBlockRange(scanKey, startBlock, endBlock) {
         const dto = await this._collection.findOne({
             $and: [
                { '_id.start': startBlock },
@@ -161,18 +160,25 @@ class BlockRangeRepository {
         return dto ? BlockRange.fromDocument(dto) : null;
     }
     
+    async hasScanKey(scanKey) {
+        const dto = await this._collection.findOne({
+            '_id.scan_key': scanKey
+        });
+        
+        return !!dto;
+    }
+    
     async hasUnprocessedBlockRanges(scanKey, startBlock, endBlock) {
         const options = [
             { '_id.scan_key': scanKey },
-            { tree_depth: { $gt: 0 } },
         ];
 
         if (startBlock) {
-            options.push({ '_id.start': { $gte: startBlock } })
+            options.push({ 'parent_id.start': startBlock })
         }
 
         if (endBlock) {
-            options.push({ '_id.end': { $lte: endBlock } })
+            options.push({ 'parent_id.end': endBlock })
         }
 
         const dto = await this._collection.findOne({ $and: options });
