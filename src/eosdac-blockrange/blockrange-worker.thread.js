@@ -105,8 +105,7 @@ class BlockRangeWorker extends WorkerThread {
     async _processBlock(blockData) {
         const {
             blockNumber,
-            startBlock,
-            endBlock,
+            range,
             traces,
             deltas,
             abi,
@@ -115,7 +114,7 @@ class BlockRangeWorker extends WorkerThread {
         
         if (!(blockNumber % 1000)){
             log(`StateReceiver : received block ${blockNumber}`);
-            log(`Start: ${startBlock}, End: ${endBlock}, Current: ${blockNumber}`);
+            log(`Start: ${range.start}, End: ${range.end}, Current: ${blockNumber}`);
         }
         
         if (deltas.length > 0){
