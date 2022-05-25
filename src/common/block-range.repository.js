@@ -2,6 +2,7 @@ const MongoClient = require('mongodb').MongoClient;
 const { loadConfig } = require('../functions');
 const { log } = require('../state-history/state-history.utils');
 const { BlockRange } = require('./block-range');
+const { BlockNumberOutOfRangeError } = require('./block-range.errors');
 
 async function connectMongo(config) {
     return new Promise((resolve, reject) => {
@@ -86,11 +87,17 @@ class BlockRangeRepository {
     }
 
     async startNextRange() {
+        const { scanKey } = this._config;
         const result = await this._collection.findOneAndUpdate(
             {
-                is_leaf_node: true,
-                time_stamp : { $exists : false },
-            },
+                $and: [
+                    {is_leaf_node: true},
+                {$or: [
+                    { time_stamp: { $exists : false } },
+                    { time_stamp: { $lt : new Date(Date.now() - 60000) } }
+                ]},
+                {'_id.scan_key': scanKey},
+            ]},
             { $set: { time_stamp: new Date() } },
             {
                 sort: { time_stamp: 1 },
@@ -171,6 +178,8 @@ class BlockRangeRepository {
     async hasUnprocessedBlockRanges(scanKey, startBlock, endBlock) {
         const options = [
             { '_id.scan_key': scanKey },
+            { tree_depth: { $gt: 0 } },
+            { is_leaf_node: true },
         ];
 
         if (startBlock) {
@@ -182,13 +191,19 @@ class BlockRangeRepository {
         }
 
         const dto = await this._collection.findOne({ $and: options });
-        
+
         return !!dto;
     }
 
     async updateProcessedBlockNumber(blockNumber) {
+        const { scanKey } = this._config;
         const range = await this._findRangeForBlockNumber(blockNumber);
-        return this._setCurrentBlockProgress(range, blockNumber);
+
+        if (range) {
+            return this._setCurrentBlockProgress(range, blockNumber);
+        }
+
+        throw new BlockNumberOutOfRangeError(blockNumber, scanKey);
     }
 }
 

@@ -4,7 +4,7 @@ const { MessageService } = require('../../connections/message.service');
 const { StateHistoryService } = require('../../state-history/state-history.service');
 const { BlockRange } = require('../../common/block-range');
 const { loadConfig } = require('../../functions');
-const { getBlockTimestamp } = require('../../state-history/state-history.utils');
+const { getBlockTimestamp, log } = require('../../state-history/state-history.utils');
 
 const runFillerTestMode = async (testBlock) => {
     const config = loadConfig();
@@ -16,7 +16,6 @@ const runFillerTestMode = async (testBlock) => {
     await messageService.init();
 
     const dacDirectory = new DacDirectory({ config });
-    await dacDirectory.reload();
 
     const actionHandler = new ActionHandler({
         queue: messageService._source,
@@ -39,8 +38,13 @@ const runFillerTestMode = async (testBlock) => {
         logger
     });
 
-    const stateHistory = new StateHistoryService(this._config.eos);
+    let startTimestamp;
+    let endTimestamp;
+
+    const stateHistory = new StateHistoryService(config.eos);
     stateHistory.onReceivedBlock(async (block) => {
+        startTimestamp = Date.now();
+        await dacDirectory.reload();
         await processBlock(
             block,
             { traceHandler, deltaHandler}
@@ -48,7 +52,8 @@ const runFillerTestMode = async (testBlock) => {
         processedBlock = block;
     });
     stateHistory.onBlockRangeComplete(async () => {
-        log('Test Completed');
+        endTimestamp = Date.now();
+        log('Test Completed in', endTimestamp - startTimestamp, 'ms');
     });
 
     await stateHistory.connect();
@@ -66,10 +71,9 @@ const processBlock = async (blockData, handlers) => {
     const { blockNumber, range, block, traces, deltas, abi } = blockData;
     const blockTimestamp = getBlockTimestamp(block);
 
-    if (!(blockNumber % 1000)){
-        log(`StateReceiver : received block ${blockNumber}`);
-        log(`Start: ${range.start}, End: ${range.end}, Current: ${blockNumber}`);
-    }
+    log(`StateReceiver : received block ${blockNumber}`);
+    log(`Start: ${range.start}, End: ${range.end}, Current: ${blockNumber}`);
+    log(`deltas: ${deltas.length}, traces: ${traces.length}`);
 
     if (deltas.length > 0){
         deltaHandler.processDelta(blockNumber, deltas, abi.types, blockTimestamp);
