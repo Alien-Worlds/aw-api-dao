@@ -40,7 +40,7 @@ describe('GetCandidateUseCase', () => {
 		jest.clearAllMocks();
 		container = null;
 	});
-  it('returns a candidate when one is found', async () => {
+  it('returns a candidate when found', async () => {
     mockService.fetchCandidate.mockResolvedValue({
       content: [mockCandidate],
       failure: null,
@@ -56,13 +56,14 @@ describe('GetCandidateUseCase', () => {
         upper_bound: 'yciky.c.wam',
         lower_bound: 'yciky.c.wam',
       });
+
       expect(result.content).toBeInstanceOf(Entities.Candidate);
       
   });
 
   it('returns null when no candidate is found', async () => {
     mockService.fetchCandidate.mockResolvedValue({
-      content: false,
+      content: [],
       failure: null,
     });
 
@@ -75,14 +76,13 @@ describe('GetCandidateUseCase', () => {
         lower_bound: 'wallet123',
       });
     console.warn("result:", result)
-    // expect(result).toEqual({ content: null });
+    expect(result).toEqual({ content: null });
   });
 
   it('returns null when the candidate is inactive', async () => {
     mockService.fetchCandidate.mockResolvedValue({
-      content: null,
+      content: [],
       failure: null,
-      hello: null,
     });
 
    

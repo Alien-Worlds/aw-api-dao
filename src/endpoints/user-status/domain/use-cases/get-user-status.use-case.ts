@@ -1,7 +1,6 @@
 import { inject, injectable, Result, UseCase } from '@alien-worlds/api-core';
 import { DacDirectory } from '@alien-worlds/eosdac-api-common';
 
-
 import { DAOUserStatusType } from '../../data/dtos/userstatus.dto';
 import { DaoUserStatus } from '../entities/dao-user-status';
 import { GetCandidateUseCase } from './get-candidate.use-case';
@@ -15,81 +14,79 @@ import { GetMemberAgreedTermsUseCase } from './get-member-agreed-terms.use-case'
  */
 @injectable()
 export class GetUserStatusUseCase implements UseCase<DaoUserStatus[]> {
-	public static Token = 'GET_USER_STATUS_USE_CASE';
+  public static Token = 'GET_USER_STATUS_USE_CASE';
 
-	constructor(
-		/*injections*/
-		@inject(GetCandidateUseCase.Token)
-		private getCandidatesUseCase: GetCandidateUseCase,
-		@inject(GetCustodianUseCase.Token)
-		private getCustodianUseCase: GetCustodianUseCase,
-		@inject(GetMemberTermsUseCase.Token)
-		private getMemberTermsUseCase: GetMemberTermsUseCase,
-		@inject(GetMemberAgreedTermsUseCase.Token)
-		private getMembersAgreedTermsUseCase: GetMemberAgreedTermsUseCase
-	) {}
+  constructor(
+    /*injections*/
+    @inject(GetCandidateUseCase.Token)
+    private getCandidatesUseCase: GetCandidateUseCase,
+    @inject(GetCustodianUseCase.Token)
+    private getCustodianUseCase: GetCustodianUseCase,
+    @inject(GetMemberTermsUseCase.Token)
+    private getMemberTermsUseCase: GetMemberTermsUseCase,
+    @inject(GetMemberAgreedTermsUseCase.Token)
+    private getMembersAgreedTermsUseCase: GetMemberAgreedTermsUseCase
+  ) {}
 
-	/**
-	 * @async
-	 * @returns {Promise<Result<DaoUserStatus[]>>}
-	 */
-	public async execute(
-		walletId: string,
-		dacs: DacDirectory[]
-	): Promise<Result<DaoUserStatus[]>> {
-		const result: DaoUserStatus[] = [];
-		let status: DAOUserStatusType = DAOUserStatusType.EXPLORER;
-		for (const dac of dacs) {
-			status = DAOUserStatusType.EXPLORER;
+  /**
+   * @async
+   * @returns {Promise<Result<DaoUserStatus[]>>}
+   */
+  public async execute(
+    walletId: string,
+    dacs: DacDirectory[]
+  ): Promise<Result<DaoUserStatus[]>> {
+    const result: DaoUserStatus[] = [];
+    let status: DAOUserStatusType = DAOUserStatusType.EXPLORER;
+    for (const dac of dacs) {
+      status = DAOUserStatusType.EXPLORER;
 
-			const { content: custodian } = await this.getCustodianUseCase.execute(
-				dac.dacId,
-				walletId
-			);
-			console.log("custodian:", custodian)
+      const { content: custodian, failure } =
+        await this.getCustodianUseCase.execute(dac.dacId, walletId);
 
-			if (custodian) {
-				status = DAOUserStatusType.CUSTODIAN;
-				result.push(DaoUserStatus.create({ name: dac.dacId, status }));
-				console.log("result:", result)
-				continue;
-			}
-			
-			const { content: candidate } = await this.getCandidatesUseCase.execute(
-				dac.dacId,
-				walletId
-			);
-			console.log("candidate:", candidate)
+      if (failure) {
+        return Result.withFailure(failure);
+      }
 
-			if (candidate) {
-				status = DAOUserStatusType.CANDIDATE;
-				result.push(DaoUserStatus.create({ name: dac.dacId, status }));
-				console.log("result:", result)
-				continue;
-			}
+      if (custodian) {
+        status = DAOUserStatusType.CUSTODIAN;
+        result.push(DaoUserStatus.create({ name: dac.dacId, status }));
 
-			const { content: terms, failure: getMemberTermsFailure } =
-				await this.getMemberTermsUseCase.execute(dac.dacId);
+        continue;
+      }
 
-			if (getMemberTermsFailure) {
-				return Result.withFailure(getMemberTermsFailure);
-			}
+      const { content: candidate } = await this.getCandidatesUseCase.execute(
+        dac.dacId,
+        walletId
+      );
 
-			const { content: agreedTerms, failure: getSignedMemberTermsFailure } =
-				await this.getMembersAgreedTermsUseCase.execute(dac.dacId, walletId);
+      if (candidate) {
+        status = DAOUserStatusType.CANDIDATE;
+        result.push(DaoUserStatus.create({ name: dac.dacId, status }));
+        continue;
+      }
 
-			if (getSignedMemberTermsFailure) {
-				return Result.withFailure(getSignedMemberTermsFailure);
-			}
-			if (agreedTerms === Number(terms.version)) {
-				status = DAOUserStatusType.MEMBER;
-			}
-console.log("result:", result)
-			result.push(DaoUserStatus.create({ name: dac.dacId, status }));
-		}
-console.log("result:", result)
-		return Result.withContent(result);
-	}
+      const { content: terms, failure: getMemberTermsFailure } =
+        await this.getMemberTermsUseCase.execute(dac.dacId);
 
-	/*methods*/
+      if (getMemberTermsFailure) {
+        return Result.withFailure(getMemberTermsFailure);
+      }
+
+      const { content: agreedTerms, failure: getSignedMemberTermsFailure } =
+        await this.getMembersAgreedTermsUseCase.execute(dac.dacId, walletId);
+
+      if (getSignedMemberTermsFailure) {
+        return Result.withFailure(getSignedMemberTermsFailure);
+      }
+      if (agreedTerms === Number(terms.version)) {
+        status = DAOUserStatusType.MEMBER;
+      }
+
+      result.push(DaoUserStatus.create({ name: dac.dacId, status }));
+    }
+    return Result.withContent(result);
+  }
+
+  /*methods*/
 }

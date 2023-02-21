@@ -121,7 +121,7 @@ export const buildAPIServer = async () => {
 		)
 	);
 
-	FastifyRoute.mount(
+	Route.mount(
 		api,
 		GetCustodiansRoute.create(
 			custodiansController.list.bind(custodiansController)
