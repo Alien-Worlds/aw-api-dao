@@ -28,6 +28,9 @@ import openApiOptions from './open-api'
 import { ProfileController } from './endpoints/profile/domain/profile.controller';
 import { setupEndpointDependencies } from './endpoints/api.ioc.config';
 import { VotingHistoryController } from './endpoints/voting-history/domain/voting-history.controller';
+import { UserStatusController } from './endpoints/user-status/domain/userstatus.controller';
+import {GetUserStatusRoute} from './endpoints/user-status/routes/user-status.route'
+
 
 initLogger('dao-api', config.logger);
 
@@ -66,6 +69,9 @@ export const buildAPIServer = async () => {
 
 	const candidatesController: CandidatesController =
 		apiIoc.get<CandidatesController>(CandidatesController.Token);
+
+	const userStatusController: UserStatusController =
+		apiIoc.get<UserStatusController>(UserStatusController.Token);
 
 	const custodiansController: CustodiansController =
 		apiIoc.get<CustodiansController>(CustodiansController.Token);
@@ -109,6 +115,13 @@ export const buildAPIServer = async () => {
 	);
 
 	Route.mount(
+		api,
+		GetUserStatusRoute.create(
+			userStatusController.getStatus.bind(userStatusController)
+		)
+	);
+
+	FastifyRoute.mount(
 		api,
 		GetCustodiansRoute.create(
 			custodiansController.list.bind(custodiansController)

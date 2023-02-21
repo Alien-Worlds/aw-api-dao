@@ -30,7 +30,7 @@ export class GetMemberTermsUseCase
 	 */
 	public async execute(
 		dacId: string,
-		limit = 1
+		limit = 1,
 	): Promise<Result<TokenWorldsContract.Deltas.Entities.MemberTerms>> {
 		const { content: rows, failure } = await this.service.fetchMemberTerms({
 			scope: dacId.toLowerCase(),

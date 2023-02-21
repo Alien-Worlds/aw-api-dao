@@ -43,3 +43,6 @@ export type DocsConfig = {
 export type DACConfig = {
 	nameCache: Map<string, DacDirectory>;
 };
+export type DACConfigArray = {
+	nameCache: Map<string, DacDirectory[]>;
+};

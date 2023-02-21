@@ -1,6 +1,7 @@
 import {
 	Config,
 	DACConfig,
+	DACConfigArray,
 	DocsConfig,
 	EOSConfig,
 	LoggerConfig,
@@ -43,6 +44,11 @@ export default class AppConfig implements Config {
 
 		public readonly dac: DACConfig = {
 			nameCache: new Map(),
+		},
+
+		public readonly setOfDacs: DACConfigArray = {
+			nameCache: new Map()
 		}
+		
 	) {}
 }

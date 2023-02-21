@@ -9,7 +9,6 @@ import {
 	TokenWorldsContract
 } from '@alien-worlds/eosdac-api-common';
 import { AsyncContainerModule, Container, EosJsRpcSource, MongoDB, MongoSource } from '@alien-worlds/api-core';
-
 import AppConfig from 'src/config/app-config';
 import { CandidatesController } from './candidates/domain/candidates.controller';
 import { CandidatesVotersHistoryController } from './candidates-voters-history/domain/candidates-voters-history.controller';
@@ -38,6 +37,11 @@ import { ProfileController } from './profile/domain/profile.controller';
 import { setupStateRepository } from './health';
 import { setupVotingWeightRepository } from './candidates-voters-history/ioc.config';
 import { VotingHistoryController } from './voting-history/domain/voting-history.controller';
+import { UserStatusController } from './user-status/domain/userstatus.controller';
+import { GetUserStatusUseCase } from './user-status/domain/use-cases/get-user-status.use-case';
+import { GetCandidateUseCase } from './user-status/domain/use-cases/get-candidate.use-case';
+import { GetMemberAgreedTermsUseCase } from './user-status/domain/use-cases/get-member-agreed-terms.use-case';
+import { GetCustodianUseCase } from './user-status/domain/use-cases/get-custodian.use-case';
 
 /*imports*/
 
@@ -89,8 +93,8 @@ export const setupEndpointDependencies = async (
 		 */
 
 		await setupFlagRepository(mongoSource, container);
-		await setupDacDirectoryRepository(mongoSource, eosJsRpcSource, container)
-		await setupUserVotingHistoryRepository(mongoSource, container)
+		await setupDacDirectoryRepository(mongoSource, eosJsRpcSource, container);
+		await setupUserVotingHistoryRepository(mongoSource, container);
 		await setupVotingWeightRepository(mongoSource, container);
 		await setupContractActionRepository(mongoSource, container);
 		await setupStateRepository(mongoSource, container);
@@ -120,20 +124,36 @@ export const setupEndpointDependencies = async (
 
 		bind<GetDacsController>(GetDacsController.Token).to(GetDacsController);
 		bind<GetAllDacsUseCase>(GetAllDacsUseCase.Token).to(GetAllDacsUseCase);
-		bind<GetDacTreasuryUseCase>(GetDacTreasuryUseCase.Token).to(GetDacTreasuryUseCase);
+		bind<GetDacTreasuryUseCase>(GetDacTreasuryUseCase.Token).to(
+			GetDacTreasuryUseCase
+		);
 		bind<GetDacInfoUseCase>(GetDacInfoUseCase.Token).to(GetDacInfoUseCase);
-		bind<GetDacTokensUseCase>(GetDacTokensUseCase.Token).to(GetDacTokensUseCase);
+		bind<GetDacTokensUseCase>(GetDacTokensUseCase.Token).to(
+			GetDacTokensUseCase
+		);
 
 		/**
 		 * VOTING HISTORY
 		 */
-		bind<VotingHistoryController>(VotingHistoryController.Token).to(VotingHistoryController);
-		bind<GetUserVotingHistoryUseCase>(GetUserVotingHistoryUseCase.Token).to(GetUserVotingHistoryUseCase);
+		bind<VotingHistoryController>(VotingHistoryController.Token).to(
+			VotingHistoryController
+		);
+		bind<GetUserVotingHistoryUseCase>(GetUserVotingHistoryUseCase.Token).to(
+			GetUserVotingHistoryUseCase
+		);
 
-		bind<CandidatesVotersHistoryController>(CandidatesVotersHistoryController.Token).to(CandidatesVotersHistoryController);
-		bind<GetCandidatesVotersHistoryUseCase>(GetCandidatesVotersHistoryUseCase.Token).to(GetCandidatesVotersHistoryUseCase);
-		bind<CountVotersHistoryUseCase>(CountVotersHistoryUseCase.Token).to(CountVotersHistoryUseCase);
-		bind<GetVotingPowerUseCase>(GetVotingPowerUseCase.Token).to(GetVotingPowerUseCase);
+		bind<CandidatesVotersHistoryController>(
+			CandidatesVotersHistoryController.Token
+		).to(CandidatesVotersHistoryController);
+		bind<GetCandidatesVotersHistoryUseCase>(
+			GetCandidatesVotersHistoryUseCase.Token
+		).to(GetCandidatesVotersHistoryUseCase);
+		bind<CountVotersHistoryUseCase>(CountVotersHistoryUseCase.Token).to(
+			CountVotersHistoryUseCase
+		);
+		bind<GetVotingPowerUseCase>(GetVotingPowerUseCase.Token).to(
+			GetVotingPowerUseCase
+		);
 
 		/**
 		 * CANDIDATES
@@ -155,6 +175,26 @@ export const setupEndpointDependencies = async (
 		);
 		bind<CandidatesController>(CandidatesController.Token).to(
 			CandidatesController
+		);
+		/**
+		 * USER STATUS
+		 */
+		bind<GetCandidateUseCase>(GetCandidateUseCase.Token).to(
+			GetCandidateUseCase
+		);
+		bind<GetCustodianUseCase>(GetCustodianUseCase.Token).to(
+			GetCustodianUseCase
+		);
+
+		bind<GetMemberAgreedTermsUseCase>(GetMemberAgreedTermsUseCase.Token).to(
+			GetMemberAgreedTermsUseCase
+		);
+
+		bind<GetUserStatusUseCase>(GetUserStatusUseCase.Token).to(
+			GetUserStatusUseCase
+		);
+		bind<UserStatusController>(UserStatusController.Token).to(
+			UserStatusController
 		);
 
 		/**
