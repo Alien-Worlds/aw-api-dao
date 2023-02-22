@@ -1,13 +1,15 @@
 import 'reflect-metadata';
 
-import { config } from '@config';
-import { Failure, Result } from '@alien-worlds/api-core';
-import { UserStatusController } from '../userstatus.controller';
 import { Container } from 'inversify';
+
+import { Failure, Result } from '@alien-worlds/api-core';
+import { DacDirectory, IndexWorldsContract } from '@alien-worlds/eosdac-api-common';
+import { LoadDacConfigError } from '@common/api/domain/errors/load-dac-config.error';
+import { config } from '@config';
+
 import { GetUserStatusInput } from '../models/get-user-status.input';
 import { GetUserStatusUseCase } from '../use-cases/get-user-status.use-case';
-import { LoadDacConfigError } from '@common/api/domain/errors/load-dac-config.error';
-import { IndexWorldsContract } from '@alien-worlds/eosdac-api-common';
+import { UserStatusController } from '../userstatus.controller';
 
 /*imports*/
 
@@ -89,5 +91,31 @@ describe('Candidate Controller Unit tests', () => {
 		const result = await controller.getStatus(input);
 		expect(result.failure.error).toBeInstanceOf(LoadDacConfigError);
 	});
-	/*unit-tests*/
+    it('Should result with LoadDacConfig from the cache', async () => {
+        const dacConfig = DacDirectory.fromStruct(<
+            IndexWorldsContract.Deltas.Types.DacsStruct
+          >{
+            accounts: [{ key: 2, value: 'dao.worlds' }],
+            symbol: {
+              sym: 'EYE',
+            },
+            refs: [],
+          });
+          
+          const anotherDacConfig = DacDirectory.fromStruct(<
+            IndexWorldsContract.Deltas.Types.DacsStruct
+          >{
+            accounts: [{ key: 3, value: 'dao.universe' }],
+            symbol: {
+              sym: 'SPACE',
+            },
+            refs: [],
+          });
+          
+        const dacConfigArray = [dacConfig, anotherDacConfig];
+		mockedConfig.setOfDacs.nameCache.get = () => dacConfigArray;
+		
+		const result = await controller.getStatus(input);
+		expect(result.content).toBeTruthy();
+	});
 });

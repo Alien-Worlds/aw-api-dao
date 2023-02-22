@@ -1,7 +1,10 @@
 import { inject, injectable, Result, UseCase } from '@alien-worlds/api-core';
 import { DacDirectory } from '@alien-worlds/eosdac-api-common';
 
-import { DAOUserStatusType } from '../../data/dtos/userstatus.dto';
+import {
+  DAOUserStatusType,
+  ERROR_MESSAGE_TYPE,
+} from '../../data/dtos/userstatus.dto';
 import { DaoUserStatus } from '../entities/dao-user-status';
 import { GetCandidateUseCase } from './get-candidate.use-case';
 import { GetCustodianUseCase } from './get-custodian.use-case';
@@ -41,13 +44,15 @@ export class GetUserStatusUseCase implements UseCase<DaoUserStatus[]> {
     for (const dac of dacs) {
       status = DAOUserStatusType.EXPLORER;
 
-      const { content: custodian, failure } =
+      const { content: custodian, failure: getCustodianFailure } =
         await this.getCustodianUseCase.execute(dac.dacId, walletId);
 
-      if (failure) {
-        return Result.withFailure(failure);
+      if (
+        getCustodianFailure &&
+        getCustodianFailure.error.message !== ERROR_MESSAGE_TYPE.NOTFOUND
+      ) {
+        return Result.withFailure(getCustodianFailure);
       }
-
       if (custodian) {
         status = DAOUserStatusType.CUSTODIAN;
         result.push(DaoUserStatus.create({ name: dac.dacId, status }));
@@ -55,10 +60,15 @@ export class GetUserStatusUseCase implements UseCase<DaoUserStatus[]> {
         continue;
       }
 
-      const { content: candidate } = await this.getCandidatesUseCase.execute(
-        dac.dacId,
-        walletId
-      );
+      const { content: candidate, failure: getCandidateFailure } =
+        await this.getCandidatesUseCase.execute(dac.dacId, walletId);
+
+      if (
+        getCandidateFailure &&
+        getCandidateFailure.error.message !== ERROR_MESSAGE_TYPE.NOTFOUND
+      ) {
+        return Result.withFailure(getCandidateFailure);
+      }
 
       if (candidate) {
         status = DAOUserStatusType.CANDIDATE;

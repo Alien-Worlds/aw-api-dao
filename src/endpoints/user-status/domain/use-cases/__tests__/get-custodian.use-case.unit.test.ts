@@ -1,9 +1,11 @@
-import { Container } from 'inversify';
+import { GetCustodianUseCase } from '../get-custodian.use-case';
 import { DaoWorldsContract } from '@alien-worlds/eosdac-api-common';
-import { Failure } from '@alien-worlds/api-core';
-import { GetCandidateUseCase } from '../get-candidate.use-case';
+import {
+  Failure,
+} from '@alien-worlds/api-core';
+import { Container } from 'inversify';
 
-const mockCandidate = {
+const mockCustodian = {
   requestedpay: '10000 TLM',
   total_vote_power: 1,
   rank: 1,
@@ -14,39 +16,39 @@ const mockCandidate = {
 
 const Entities = DaoWorldsContract.Deltas.Entities;
 
-describe('GetCandidateUseCase', () => {
+describe('GetCustodianUseCase', () => {
   let container: Container;
-  let useCase: GetCandidateUseCase;
+  let useCase: GetCustodianUseCase;
 
   const mockService = {
-    fetchCandidate: jest.fn(),
+    fetchCustodian: jest.fn(),
   };
 
   beforeAll(() => {
     container = new Container();
 
     container
-      .bind<GetCandidateUseCase>(GetCandidateUseCase.Token)
-      .toConstantValue(new GetCandidateUseCase(mockService as any));
+      .bind<GetCustodianUseCase>(GetCustodianUseCase.Token)
+      .toConstantValue(new GetCustodianUseCase(mockService as any));
   });
 
   beforeEach(() => {
-    useCase = container.get<GetCandidateUseCase>(GetCandidateUseCase.Token);
+    useCase = container.get<GetCustodianUseCase>(GetCustodianUseCase.Token);
   });
 
   afterAll(() => {
     jest.clearAllMocks();
     container = null;
   });
-  it('returns a candidate when found', async () => {
-    mockService.fetchCandidate.mockResolvedValue({
-      content: [mockCandidate],
+  it('returns a Custodian when found', async () => {
+    mockService.fetchCustodian.mockResolvedValue({
+      content: [mockCustodian],
       failure: null,
     });
 
     const result = await useCase.execute('nerix', 'yciky.c.wam');
 
-    expect(mockService.fetchCandidate).toHaveBeenCalledWith({
+    expect(mockService.fetchCustodian).toHaveBeenCalledWith({
       scope: 'nerix',
       code: 'dao.worlds',
       limit: 1,
@@ -54,17 +56,17 @@ describe('GetCandidateUseCase', () => {
       lower_bound: 'yciky.c.wam',
     });
 
-    expect(result.content).toBeInstanceOf(Entities.Candidate);
+    expect(result.content).toBeInstanceOf(Entities.Custodian);
   });
 
-  it('returns failure when no candidate is found', async () => {
-    mockService.fetchCandidate.mockResolvedValue({
+  it('returns failure when no Custodian is found', async () => {
+    mockService.fetchCustodian.mockResolvedValue({
       content: [],
       failure: null,
     });
 
     const result = await useCase.execute('nerix', 'wallet123');
-    expect(mockService.fetchCandidate).toHaveBeenCalledWith({
+    expect(mockService.fetchCustodian).toHaveBeenCalledWith({
       scope: 'nerix',
       code: 'dao.worlds',
       limit: 1,
@@ -75,8 +77,8 @@ describe('GetCandidateUseCase', () => {
     expect(result.isFailure).toBeTruthy();
   });
 
-  it('returns failure when the candidate is inactive', async () => {
-    mockService.fetchCandidate.mockResolvedValue({
+  it('returns failure when the Custodian is inactive', async () => {
+    mockService.fetchCustodian.mockResolvedValue({
       content: [],
       failure: null,
     });
@@ -87,7 +89,7 @@ describe('GetCandidateUseCase', () => {
   });
 
   it('returns failure when there is a problem with api', async () => {
-    mockService.fetchCandidate.mockResolvedValue({
+    mockService.fetchCustodian.mockResolvedValue({
       content: [],
       failure: Failure.withMessage('error'),
     });

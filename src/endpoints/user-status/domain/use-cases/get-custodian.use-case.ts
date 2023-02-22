@@ -1,11 +1,13 @@
 import { DaoWorldsContract } from '@alien-worlds/eosdac-api-common';
 import {
+    Failure,
 	injectable,
 	Result,
 	SmartContractDataNotFoundError,
 	UseCase,
 } from '@alien-worlds/api-core';
 import { inject } from 'inversify';
+import { ERROR_MESSAGE_TYPE } from '../../data/dtos/userstatus.dto';
 
 const {
 	Entities: { Custodian },
@@ -43,21 +45,16 @@ export class GetCustodianUseCase
 			lower_bound: walletId,
 		});
 
-		if (
-			failure instanceof SmartContractDataNotFoundError ||
-			!rows ||
-			(rows && rows.length === 0)
-		) {
-			return Result.withContent(null);
-		}
-
-		if (failure) {
-			return Result.withFailure(failure);
-		}
-
-		const custodian = Custodian.fromStruct(rows[0]);
-
-		return Result.withContent(custodian);
+        if (failure) {
+            return Result.withFailure(failure);
+          }
+          if (rows.filter(row => row.is_active).length === 0) {
+            return Result.withFailure(
+              Failure.withMessage(ERROR_MESSAGE_TYPE.NOTFOUND)
+            );
+          }
+      
+          return Result.withContent(Custodian.fromStruct(rows[0]));
 	}
 
 	/*methods*/

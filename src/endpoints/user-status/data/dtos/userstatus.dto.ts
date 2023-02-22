@@ -12,5 +12,7 @@ export type DaoUserStatuses = {
 	name: string;
 	status: DAOUserStatusType;
 };
-
+export enum ERROR_MESSAGE_TYPE {
+	NOTFOUND = "NOTFOUND",
+}
 
