@@ -1,0 +1,23 @@
+# BUILDER
+FROM node:18-alpine AS dao-api-builder
+RUN apk add --no-cache --virtual build-dependencies curl
+
+COPY --chown=node . /var/www/api
+COPY --chown=node .env-example /var/www/api/.env-prod
+
+USER node
+WORKDIR /var/www/api
+
+RUN yarn && yarn build
+
+# PRODUCTION
+FROM node:18-alpine AS dao-api
+LABEL org.opencontainers.image.vendor='Dacoco GMBH' \
+      org.opencontainers.image.description='DAO API'
+
+COPY --chown=node --from=dao-api-builder /var/www/api /var/www/api
+
+USER node
+WORKDIR /var/www/api
+
+CMD [ "yarn", "api" ]
