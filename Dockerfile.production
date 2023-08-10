@@ -20,4 +20,4 @@ COPY --chown=node --from=dao-api-builder /var/www/api /var/www/api
 USER node
 WORKDIR /var/www/api
 
-CMD [ "yarn", "api" ]
+CMD [ "yarn", "api:prod" ]
