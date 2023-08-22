@@ -43,6 +43,15 @@
     "@alien-worlds/aw-core" "^0.0.15"
     "@alien-worlds/aw-storage-mongodb" "^0.0.10"
 
+"@alien-worlds/aw-contract-msig-worlds@^0.0.6":
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/@alien-worlds/aw-contract-msig-worlds/-/aw-contract-msig-worlds-0.0.6.tgz#3c3f8698ea1e83cf0b7861a447c6906f1d346e4d"
+  integrity sha512-/X37FCtuX6Jnz1F39ygIdJb2r1aNjxBxk3KfwfAVoE3AFO/FW3ciVq2xZhhlRBeE5kJ1nz3K0ZoWoqiCg5B6gw==
+  dependencies:
+    "@alien-worlds/aw-antelope" "^0.0.40"
+    "@alien-worlds/aw-core" "^0.0.15"
+    "@alien-worlds/aw-storage-mongodb" "^0.0.10"
+
 "@alien-worlds/aw-contract-stkvt-worlds@^0.0.23":
   version "0.0.23"
   resolved "https://registry.yarnpkg.com/@alien-worlds/aw-contract-stkvt-worlds/-/aw-contract-stkvt-worlds-0.0.23.tgz#4cf6f916d3bb1fc0477c71a3b86dfab2352b21a7"
