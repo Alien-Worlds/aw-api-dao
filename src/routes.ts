@@ -18,6 +18,8 @@ import { HealthController } from '@endpoints/health/domain/health.controller';
 import { PingController } from '@endpoints/ping';
 import { ProfileController } from '@endpoints/profile/domain/profile.controller';
 import { VotingHistoryController } from '@endpoints/voting-history/domain/voting-history.controller';
+import { MSIGSController } from '@endpoints/msigs/domain/msigs.controller';
+import { GetMSIGSRoute } from '@endpoints/msigs/routes/msigs.route';
 
 export const mountRoutes = (
   api: DaoApi,
@@ -44,6 +46,8 @@ export const mountRoutes = (
     container.get<CandidatesController>(CandidatesController.Token);
   const custodiansController: CustodiansController =
     container.get<CustodiansController>(CustodiansController.Token);
+
+  const msigsController = container.get<MSIGSController>(MSIGSController.Token);
 
   //
 
@@ -108,5 +112,10 @@ export const mountRoutes = (
   Route.mount(
     api.framework,
     GetPingRoute.create(pingController.ping.bind(pingController), config)
+  );
+
+  Route.mount(
+    api.framework,
+    GetMSIGSRoute.create(msigsController.getMSIGS.bind(msigsController), config)
   );
 };
