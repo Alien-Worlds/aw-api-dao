@@ -1,4 +1,4 @@
-import { Result } from '@alien-worlds/aw-core';
+import { Result, fetch } from '@alien-worlds/aw-core';
 import { HistoryService } from '../../domain/services/history.service';
 import ApiConfig from '@src/config/api-config';
 import { BlockStateJsonModel } from '../dtos/health.dto';
