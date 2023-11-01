@@ -23,7 +23,16 @@ export class ActionToProfileMapper {
 
     const { profile, cand } = data;
 
-    let profileJson = {};
+    let profileJson = {
+      description: null,
+      email: null,
+      familyName: null,
+      gender: null,
+      givenName: null,
+      image: null,
+      timezone: null,
+      url: null,
+    };
     if (
       typeof profile === 'string' &&
       profile.length > 0 &&
@@ -32,12 +41,12 @@ export class ActionToProfileMapper {
       try {
         let temp = profile;
         if (profile.startsWith(`{`) === false) {
-            temp = `{${profile}`;
-          }
-          if (profile.endsWith(`}`) === false) {
-            temp = `${profile}}`;
-          }
-          profileJson = JSON.parse(temp);
+          temp = `{${profile}`;
+        }
+        if (profile.endsWith(`}`) === false) {
+          temp = `${profile}}`;
+        }
+        profileJson = JSON.parse(temp);
       } catch (error) {
         console.log('Profile JSON parse error:', profile);
       }
