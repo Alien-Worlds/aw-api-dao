@@ -23,9 +23,24 @@ export class ActionToProfileMapper {
 
     const { profile, cand } = data;
 
-    let profileJson;
-    if (typeof profile === 'string') {
-      profileJson = JSON.parse(profile);
+    let profileJson = {};
+    if (
+      typeof profile === 'string' &&
+      profile.length > 0 &&
+      /("\w+":"[a-z-A-Z0-9 \\/.:]+")/.test(profile)
+    ) {
+      try {
+        let temp = profile;
+        if (profile.startsWith(`{`) === false) {
+            temp = `{${profile}`;
+          }
+          if (profile.endsWith(`}`) === false) {
+            temp = `${profile}}`;
+          }
+          profileJson = JSON.parse(temp);
+      } catch (error) {
+        console.log('Profile JSON parse error:', profile);
+      }
     }
 
     return Profile.create(
