@@ -86,7 +86,7 @@ export class ListCustodianProfilesUseCase
     const result: CustodianProfile[] = [];
 
     for (const custodian of custodians) {
-      const profile = profiles.find(item => item.id === custodian.custName);
+      const profile = profiles.find(item => item.account === custodian.custName);
       const agreedTermsVersion = agreedTerms.get(custodian.custName);
 
       result.push(

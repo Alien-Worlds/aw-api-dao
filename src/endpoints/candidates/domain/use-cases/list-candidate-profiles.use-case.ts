@@ -86,7 +86,7 @@ export class ListCandidateProfilesUseCase
 
     for (const candidate of candidates) {
       const profile = profiles.find(
-        item => item.id === candidate.candidateName
+        item => item.account === candidate.candidateName
       );
       const agreedTermsVersion = agreedTerms.get(candidate.candidateName);
 
