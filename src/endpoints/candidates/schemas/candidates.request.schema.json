@@ -18,7 +18,7 @@
     "dacId": {
       "type": "string",
       "minLength": 5,
-      "maxLength": 6
+      "maxLength": 8
     }
   }
 }
