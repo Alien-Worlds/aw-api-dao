@@ -24,6 +24,7 @@
     "@alien-worlds/aw-contract-stkvt-worlds": "^0.0.27",
     "@alien-worlds/aw-contract-token-worlds": "^0.0.36",
     "@alien-worlds/aw-contract-index-worlds": "^0.0.33",
+    "@alien-worlds/aw-contract-msig-worlds": "^0.0.6",
     "@fastify/swagger": "6.1.1",
     "@shelf/winston-datadog-logs-transport": "^1.0.7",
     "ajv": "^8.12.0",
