@@ -25,6 +25,7 @@ COPY .npmrc package.json yarn.lock tsconfig.json ./
 COPY .env.example .env.${ENVIRONMENT}
 RUN yarn install --production --frozen-lockfile --ignore-engines && yarn cache clean
 
+COPY docs ./docs
 COPY scripts ./scripts
 COPY src ./src
 COPY --from=build /var/www/api/dist ./dist
