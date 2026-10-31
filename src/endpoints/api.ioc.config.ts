@@ -8,6 +8,7 @@ import { setupAlienWorldsContractService } from '@alien-worlds/aw-contract-alien
 import { setupIndexWorldsContractService } from '@alien-worlds/aw-contract-index-worlds';
 import { setupStkvtWorldsDeltaRepository } from '@alien-worlds/aw-contract-stkvt-worlds';
 import { setupTokenWorldsContractService } from '@alien-worlds/aw-contract-token-worlds';
+import { setupMsigWorldsContractService } from '@alien-worlds/aw-contract-msig-worlds';
 import { AntelopeRpcSourceImpl } from '@alien-worlds/aw-antelope';
 import ApiConfig from '@src/config/api-config';
 import { MongoSource } from '@alien-worlds/aw-storage-mongodb';
@@ -19,6 +20,7 @@ import { CustodiansDependencyInjector } from './custodians/custodians.ioc';
 import { HealthDependencyInjector } from './health/health.ioc';
 import { VotingHistoryDependencyInjector } from './voting-history/voting-history.ioc';
 import { PingDependencyInjector } from './ping/ping.ioc';
+import { MSIGSDependencyInjector } from './msigs/msigs.ioc';
 
 export class ApiDependencyInjector extends DependencyInjector {
   public async setup(config: ApiConfig): Promise<void> {
@@ -37,6 +39,7 @@ export class ApiDependencyInjector extends DependencyInjector {
     const votingHistoryDI = new VotingHistoryDependencyInjector(container);
     const candidatesDI = new CandidatesDependencyInjector(container);
     const custodiansDI = new CustodiansDependencyInjector(container);
+    const msigsDI = new MSIGSDependencyInjector(container);
 
     healthDI.setup(config);
     pingDI.setup();
@@ -46,30 +49,37 @@ export class ApiDependencyInjector extends DependencyInjector {
     votingHistoryDI.setup();
     candidatesDI.setup();
     custodiansDI.setup();
+    msigsDI.setup();
 
     /**
      * SMART CONTRACT SERVICES
      */
 
-    await setupIndexWorldsContractService(
+    setupIndexWorldsContractService(
       antelopeRpcSource,
       config.antelope.hyperionUrl,
       container
     );
 
-    await setupAlienWorldsContractService(
+    setupAlienWorldsContractService(
       antelopeRpcSource,
       config.antelope.hyperionUrl,
       container
     );
 
-    await setupDaoWorldsContractService(
+    setupDaoWorldsContractService(
       antelopeRpcSource,
       config.antelope.hyperionUrl,
       container
     );
 
-    await setupTokenWorldsContractService(
+    setupTokenWorldsContractService(
+      antelopeRpcSource,
+      config.antelope.hyperionUrl,
+      container
+    );
+
+    setupMsigWorldsContractService(
       antelopeRpcSource,
       config.antelope.hyperionUrl,
       container
