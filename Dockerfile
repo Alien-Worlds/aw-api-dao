@@ -10,6 +10,7 @@ RUN yarn install --frozen-lockfile --ignore-engines
 
 COPY scripts ./scripts
 COPY src ./src
+COPY tests ./tests
 RUN yarn build
 
 FROM node:24-alpine3.24 AS runtime
