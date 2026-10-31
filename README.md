@@ -36,7 +36,7 @@ The DAO API is available in three environments - Production, Staging, and Develo
 Before running the API on your local machine, ensure that you have the following available:
 
 1. [GitHub](https://github.com) account
-2. [Node.js](https://nodejs.org/en)
+2. [Node.js](https://nodejs.org/en) 24 or later (see `.nvmrc`)
 3. Node package manager ([yarn](https://classic.yarnpkg.com/lang/en/docs/install/#mac-stable) or npm)
 4. [MongoDB](https://www.mongodb.com/docs/manual/installation/) native installation or running inside a Docker container
 
@@ -74,9 +74,11 @@ In each configuration file, the `ENVIRONMENT` key should contain the name of the
 ### Build API
 
 ```
-yarn
+yarn install --ignore-engines
 yarn build
 ```
+
+`--ignore-engines` is required on Node 24: the dev dependency `postman-to-openapi` (used only by `yarn docs:generate`) declares `node <20`, and Yarn Classic rejects the install without the flag. The Dockerfiles use it for the same reason.
 
 ### Start API
 
